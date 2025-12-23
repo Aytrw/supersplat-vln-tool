@@ -20,7 +20,6 @@ import { InstructionPanel } from './hud/instruction-panel';
 import { RecorderBar } from './hud/recorder-bar';
 import { AuxiliaryView } from './hud/auxiliary-view';
 import { TaskBadge } from './hud/task-badge';
-import { FOVIndicator } from './hud/fov-indicator';
 import { QuickActions } from './hud/quick-actions';
 
 /**
@@ -35,10 +34,10 @@ class VLNHudOverlay extends Container {
     private recorderBar: RecorderBar;
     private auxiliaryView: AuxiliaryView;
     private taskBadge: TaskBadge;
-    private fovIndicator: FOVIndicator;
     private quickActions: QuickActions;
 
     private bottomBarDom?: HTMLElement;
+    private instructionPanelDom?: HTMLElement;
     
     // Visibility state
     private isVisible: boolean = true;
@@ -68,6 +67,7 @@ class VLNHudOverlay extends Container {
         // Module A: Instruction Panel (Bottom-Left)
         this.instructionPanel = new InstructionPanel(this.events, this.tooltips);
         this.append(this.instructionPanel);
+        this.instructionPanelDom = this.instructionPanel.dom;
 
         // Unified VLN Bottom Toolbar (contains recorder + quick actions)
         const vlnBottomBar = new Container({
@@ -96,12 +96,8 @@ class VLNHudOverlay extends Container {
         this.setupBottomBarPositioning();
 
         // Module C: Auxiliary View Placeholder (Top-Right)
-        this.auxiliaryView = new AuxiliaryView(this.events);
+        this.auxiliaryView = new AuxiliaryView(this.events, this.tooltips);
         this.append(this.auxiliaryView);
-
-        // FOV Indicator (Bottom-Right)
-        this.fovIndicator = new FOVIndicator(this.events, this.tooltips);
-        this.append(this.fovIndicator);
     }
 
     private setupBottomBarPositioning(): void {
@@ -136,6 +132,9 @@ class VLNHudOverlay extends Container {
             // Place VLN bar above the target toolbar top edge.
             const bottom = Math.max(0, Math.round(window.innerHeight - rect.top + gapPx));
             bottomBarDom.style.bottom = `${bottom}px`;
+
+            // Keep instruction panel bottom aligned with SuperSplat native middle toolbar bottom.
+            this.updateInstructionPanelLayout();
         };
 
         // Initial positioning after layout
@@ -167,6 +166,37 @@ class VLNHudOverlay extends Container {
 
         window.addEventListener('resize', update);
     }
+
+    private updateInstructionPanelLayout(): void {
+        const panelDom = this.instructionPanelDom;
+        if (!panelDom) return;
+
+        const isVisible = (el: HTMLElement | null): el is HTMLElement => {
+            if (!el) return false;
+            if (el.classList.contains('pcui-hidden')) return false;
+            if (el.offsetParent === null && getComputedStyle(el).position !== 'fixed') return false;
+            return true;
+        };
+
+        // Prefer SuperSplat native "middle bar" (.select-toolbar). Fallback to bottom toolbar.
+        const selectToolbar = document.querySelector('.select-toolbar') as HTMLElement | null;
+        const bottomToolbar = document.getElementById('bottom-toolbar') as HTMLElement | null;
+        const anchor = (isVisible(selectToolbar) ? selectToolbar : (isVisible(bottomToolbar) ? bottomToolbar : (selectToolbar || bottomToolbar)));
+        if (!anchor) return;
+
+        const anchorRect = anchor.getBoundingClientRect();
+        const anchorBottomPx = Math.max(0, Math.round(window.innerHeight - anchorRect.bottom));
+
+        // Bottom-align with the native toolbar bottom edge
+        panelDom.style.bottom = `${anchorBottomPx}px`;
+
+        // Increase max height so instructions can be fully shown (scrollable)
+        // Leave a safe top margin for menu/robot view.
+        const topMarginPx = 24;
+        const maxHeightPx = Math.max(240, Math.floor(window.innerHeight - anchorBottomPx - topMarginPx));
+        panelDom.style.maxHeight = `${maxHeightPx}px`;
+    }
+
 
     /**
      * Register global events

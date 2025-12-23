@@ -5,7 +5,7 @@
  * Content: Camera FOV display and quick adjustment
  */
 
-import { Container, Label, SliderInput } from '@playcanvas/pcui';
+import { Container, Label } from '@playcanvas/pcui';
 
 import { Events } from '../../../events';
 import { Tooltips } from '../../tooltips';
@@ -21,7 +21,6 @@ class FOVIndicator extends Container {
     // UI elements
     private fovValue: Label;
     private sliderContainer: Container;
-    private sliderTrack: Container;
     private sliderThumb: Container;
     
     // State
@@ -32,9 +31,9 @@ class FOVIndicator extends Container {
 
     constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
-            ...args,
             id: 'vln-fov-indicator',
-            class: 'vln-hud-panel'
+            class: 'vln-hud-panel',
+            ...args
         };
 
         super(args);

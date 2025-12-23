@@ -6,21 +6,32 @@
  * Maintains 16:9 aspect ratio
  */
 
-import { Container, Label } from '@playcanvas/pcui';
+import { Container, Element, Label } from '@playcanvas/pcui';
 
 import { Events } from '../../../events';
-import { VLNEventNames } from '../../../vln/types';
+import { Tooltips } from '../../tooltips';
+
+import { FOVIndicator } from './fov-indicator';
+
+import cameraPanelSvg from '../../svg/camera-panel.svg';
+
+const createSvg = (svgString: string): HTMLElement => {
+    const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
+    return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement as HTMLElement;
+};
 
 /**
  * Auxiliary View placeholder component
  */
 class AuxiliaryView extends Container {
     private events: Events;
+    private tooltips: Tooltips;
     
     // UI elements
     private contentContainer: Container;
+    private fovIndicator: FOVIndicator;
 
-    constructor(events: Events, args = {}) {
+    constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
             ...args,
             id: 'vln-auxiliary-view',
@@ -30,6 +41,7 @@ class AuxiliaryView extends Container {
         super(args);
 
         this.events = events;
+        this.tooltips = tooltips;
 
         // Block pointer events
         ['pointerdown', 'pointerup', 'pointermove', 'wheel', 'dblclick'].forEach((eventName) => {
@@ -39,43 +51,44 @@ class AuxiliaryView extends Container {
         this.buildUI();
     }
 
+    private fovToggleBtn?: Container;
+    private fovExpanded: boolean = false;
+
     /**
      * Build UI structure
      */
     private buildUI(): void {
-        // Header
-        const header = new Container({
-            class: 'vln-hud-header'
-        });
-
-        const headerIcon = new Label({
-            text: '\uE80E', // Camera icon
-            class: 'vln-hud-header-icon'
-        });
-
-        const headerTitle = new Label({
-            text: '辅助视角',
-            class: 'vln-hud-header-title'
-        });
-
-        header.append(headerIcon);
-        header.append(headerTitle);
-        this.append(header);
-
-        // Content container (video placeholder)
+        // Content container (video placeholder) - no header for borderless look
         this.contentContainer = new Container({
             class: 'vln-auxiliary-content'
         });
+
+        // Collapsible FOV toggle button (in the mini-map frame, not blocking the view)
+        this.fovToggleBtn = new Container({
+            class: 'vln-fov-toggle-btn'
+        });
+        this.fovToggleBtn.dom.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>`;
+        this.fovToggleBtn.dom.title = '展开 FOV 调节';
+        this.fovToggleBtn.dom.addEventListener('click', (e: Event) => {
+            e.stopPropagation();
+            this.toggleFovPanel();
+        });
+
+        // FOV indicator (hidden by default, shown when expanded)
+        this.fovIndicator = new FOVIndicator(this.events, this.tooltips, {
+            class: 'vln-aux-fov-panel'
+        });
+        this.fovIndicator.hidden = true;
 
         // Placeholder content
         const placeholder = new Container({
             class: 'vln-auxiliary-placeholder'
         });
 
-        const placeholderIcon = new Label({
-            text: '\uE80E', // Camera icon
+        const placeholderIcon = new Element({
             class: 'vln-auxiliary-placeholder-icon'
         });
+        placeholderIcon.dom.appendChild(createSvg(cameraPanelSvg));
 
         const placeholderText = new Label({
             text: '机器人视角',
@@ -87,6 +100,27 @@ class AuxiliaryView extends Container {
         this.contentContainer.append(placeholder);
 
         this.append(this.contentContainer);
+
+        // Keep these outside the content so setVideoElement/setCanvasElement won't remove them
+        this.append(this.fovToggleBtn);
+        this.append(this.fovIndicator);
+    }
+
+    // ========================================================================
+    // FOV Panel Toggle
+    // ========================================================================
+
+    private toggleFovPanel(): void {
+        this.fovExpanded = !this.fovExpanded;
+        this.fovIndicator.hidden = !this.fovExpanded;
+        if (this.fovToggleBtn) {
+            this.fovToggleBtn.dom.title = this.fovExpanded ? '收起 FOV 调节' : '展开 FOV 调节';
+            if (this.fovExpanded) {
+                this.fovToggleBtn.class.add('expanded');
+            } else {
+                this.fovToggleBtn.class.remove('expanded');
+            }
+        }
     }
 
     // ========================================================================
