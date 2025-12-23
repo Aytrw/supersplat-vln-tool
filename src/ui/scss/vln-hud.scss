@@ -174,23 +174,42 @@
 }
 
 // ============================================================================
-// Module B: Recorder Control Bar (Bottom-Center, above bottom toolbar)
+// Unified VLN Bottom Toolbar (above native bottom-toolbar)
 // ============================================================================
-#vln-recorder-bar {
+#vln-bottom-bar {
     position: absolute;
     left: 50%;
-    bottom: 100px; // Above bottom toolbar
+    // Fallback position: above native bottom-toolbar. In runtime we may override
+    // this via JS to sit above `.select-toolbar` when it's visible.
+    bottom: 86px;
     transform: translateX(-50%);
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 6px;
+    background-color: $bcg-dark;
     display: flex;
+    flex-direction: row;
     align-items: center;
     gap: 8px;
-    padding: 6px 12px;
+    pointer-events: auto;
+}
+
+// ============================================================================
+// Module B: Recorder Control Bar (inside unified bar)
+// ============================================================================
+#vln-recorder-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
 }
 
 // Status indicator light
 .vln-recorder-indicator {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: $text-darkest;
     transition: all 0.3s ease;
@@ -222,8 +241,8 @@
 }
 
 .vln-recorder-btn {
-    width: 32px;
-    height: 32px;
+    width: 26px;
+    height: 26px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -234,7 +253,7 @@
     transition: all 0.15s;
     color: $clr-default;
     font-family: pc-icon;
-    font-size: 14px;
+    font-size: 12px;
 
     &:hover:not(:disabled) {
         background: $bcg-lighter;
@@ -263,25 +282,25 @@
 // Timer display
 .vln-recorder-timer {
     font-family: monospace;
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 500;
     color: $text-primary;
-    min-width: 60px;
+    min-width: 50px;
     text-align: center;
 }
 
 // Frame counter
 .vln-recorder-frames {
-    font-size: 10px;
+    font-size: 9px;
     color: $text-secondary;
-    padding-left: 8px;
+    padding-left: 6px;
     border-left: 1px solid $bcg-primary;
 }
 
 // Separator
 .vln-recorder-separator {
     width: 1px;
-    height: 20px;
+    height: 16px;
     background: $bcg-primary;
 }
 
@@ -478,28 +497,34 @@
 }
 
 // ============================================================================
-// Quick Action Buttons (positioned near recorder bar)
+// Quick Action Buttons (inside unified bar)
 // ============================================================================
 .vln-quick-actions {
-    position: absolute;
-    left: 50%;
-    bottom: 145px; // Above recorder bar
-    transform: translateX(-50%);
     display: flex;
+    align-items: center;
     gap: 4px;
+    padding-right: 8px;
+    border-right: 1px solid $bcg-primary;
 }
 
 .vln-quick-action-btn {
-    padding: 4px 10px;
+    height: 26px;
+    padding: 0 10px;
     background: $bcg-primary;
     border: none;
     border-radius: 4px;
     font-size: 10px;
     color: $text-secondary;
+    display: flex;
+    align-items: center;
     cursor: pointer;
     transition: all 0.15s;
     white-space: nowrap;
     pointer-events: auto;
+
+    .pcui-label {
+        line-height: 1;
+    }
 
     &:hover {
         background: $bcg-lighter;

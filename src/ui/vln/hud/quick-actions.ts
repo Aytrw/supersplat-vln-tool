@@ -5,7 +5,7 @@
  * Content: Quick action buttons (import, export, clear, etc.)
  */
 
-import { Container, Label, Button } from '@playcanvas/pcui';
+import { Container, Label } from '@playcanvas/pcui';
 
 import { Events } from '../../../events';
 import { Tooltips } from '../../tooltips';
