@@ -206,6 +206,32 @@
     border-radius: 0;
 }
 
+.vln-recorder-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.vln-recorder-hint {
+    font-size: 9px;
+    color: $text-darkest;
+    text-transform: uppercase;
+}
+
+.vln-recorder-state {
+    font-size: 10px;
+    font-weight: 600;
+    color: $text-secondary;
+
+    &.recording {
+        color: $error;
+    }
+
+    &.paused {
+        color: $clr-hilight;
+    }
+}
+
 // Status indicator light
 .vln-recorder-indicator {
     width: 6px;
@@ -252,8 +278,17 @@
     cursor: pointer;
     transition: all 0.15s;
     color: $clr-default;
-    font-family: pc-icon;
-    font-size: 12px;
+
+    &::before {
+        content: none !important;
+    }
+
+    svg {
+        width: 14px;
+        height: 14px;
+        display: block;
+        color: currentColor;
+    }
 
     &:hover:not(:disabled) {
         background: $bcg-lighter;
@@ -276,6 +311,16 @@
             background: $error;
             color: white;
         }
+    }
+}
+
+.vln-recorder-btn.record-btn {
+    // Start/Resume icon (triangle) should read as "start recording"
+    color: $text-secondary;
+
+    &.resume {
+        // when paused, record button becomes "resume"
+        color: $clr-hilight;
     }
 }
 
@@ -396,16 +441,17 @@
 }
 
 // ============================================================================
-// Task Info Badge (Top-Left, below menu area)
+// Task Info Badge (integrated into unified bottom bar)
 // ============================================================================
 #vln-task-badge {
-    position: absolute;
-    left: 24px;
-    top: 60px; // Below menu
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 4px 10px;
+    height: 26px;
+    padding: 0 8px 0 0;
+    background-color: transparent;
+    border-radius: 0;
+    border-right: 1px solid $bcg-primary;
 }
 
 .vln-task-badge-item {

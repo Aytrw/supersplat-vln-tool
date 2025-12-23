@@ -78,7 +78,11 @@ class VLNHudOverlay extends Container {
             vlnBottomBar.dom.addEventListener(eventName, (event: Event) => event.stopPropagation());
         });
 
-        // Quick Action Buttons (left side)
+        // Task Info Badge (integrated into the middle bar)
+        this.taskBadge = new TaskBadge(this.events);
+        vlnBottomBar.append(this.taskBadge);
+
+        // Quick Action Buttons
         this.quickActions = new QuickActions(this.events, this.tooltips);
         vlnBottomBar.append(this.quickActions);
 
@@ -94,10 +98,6 @@ class VLNHudOverlay extends Container {
         // Module C: Auxiliary View Placeholder (Top-Right)
         this.auxiliaryView = new AuxiliaryView(this.events);
         this.append(this.auxiliaryView);
-
-        // Task Info Badge (Top-Left)
-        this.taskBadge = new TaskBadge(this.events);
-        this.append(this.taskBadge);
 
         // FOV Indicator (Bottom-Right)
         this.fovIndicator = new FOVIndicator(this.events, this.tooltips);
