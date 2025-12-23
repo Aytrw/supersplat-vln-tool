@@ -15,12 +15,55 @@
 
         <!-- Service worker -->
         <script>
-            const sw = navigator.serviceWorker;
-            if (sw) {
+            (async () => {
+                const sw = navigator.serviceWorker;
+                if (!sw) return;
+
+                // injected at build time by rollup
+                const BUILD_TYPE = '__BUILD_TYPE__';
+
+                const isDevBuild = BUILD_TYPE !== 'release';
+
+                // In local development we want instant iteration.
+                // A cache-first service worker will often serve stale index.js/index.css
+                // until a hard reload (Ctrl+Shift+R) or manual SW cache clearing.
+                // Disable SW for all non-release builds (including LAN IP access).
+                if (isDevBuild) {
+                    try {
+                        const regs = await sw.getRegistrations();
+                        await Promise.all(regs.map(r => r.unregister()));
+
+                        if ('caches' in window) {
+                            const names = await caches.keys();
+                            await Promise.all(
+                                names
+                                    .filter(n => n.startsWith('superSplat-v'))
+                                    .map(n => caches.delete(n))
+                            );
+                        }
+
+                        console.log('service worker disabled for localhost development');
+                    } catch (err) {
+                        console.log('failed to disable service worker in dev', err);
+                    }
+                    return;
+                }
+
                 sw.register('./sw.js')
+                    // ensure update checks don't get stuck behind HTTP cache
+                    .then(async (reg) => {
+                        try {
+                            if (reg && typeof reg.update === 'function') {
+                                await reg.update();
+                            }
+                        } catch (e) {
+                            // ignore
+                        }
+                        return reg;
+                    })
                     .then(reg => console.log('service worker registered', reg))
                     .catch(err => console.log('failed to register service worker', err));
-            }
+            })();
         </script>
     </head>
 

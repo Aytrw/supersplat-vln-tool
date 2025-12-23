@@ -38,10 +38,10 @@
 // ============================================================================
 #vln-instruction-panel {
     position: absolute;
-    left: 360px; // Right of scene-panel (24 + 320 + 16 gap)
+    left: 24px; // Bottom-left corner
     bottom: 100px; // Above bottom toolbar (24 + 54 + gap)
     width: 280px;
-    max-height: 180px;
+    max-height: 320px;
     display: flex;
     flex-direction: column;
 
@@ -56,9 +56,19 @@
     }
 
     .vln-hud-header-icon {
-        font-family: pc-icon;
-        font-size: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 14px;
+        height: 14px;
         color: $clr-hilight;
+
+        svg {
+            width: 14px;
+            height: 14px;
+            stroke: currentColor;
+            fill: none;
+        }
     }
 
     .vln-hud-header-title {

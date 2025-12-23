@@ -5,7 +5,7 @@
  * Content: Navigation instruction text display
  */
 
-import { Container, Label } from '@playcanvas/pcui';
+import { Container, Element, Label } from '@playcanvas/pcui';
 
 import { Events } from '../../../events';
 import { Tooltips } from '../../tooltips';
@@ -58,10 +58,14 @@ class InstructionPanel extends Container {
             class: 'vln-hud-header'
         });
 
-        const headerIcon = new Label({
-            text: '\uE80A', // Navigation icon
+        const headerIcon = new Element({
             class: 'vln-hud-header-icon'
         });
+        headerIcon.dom.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true" focusable="false">
+                <path d="M3 12h4l3-9 4 18 3-9h4"/>
+            </svg>
+        `;
 
         const headerTitle = new Label({
             text: '导航指令',
