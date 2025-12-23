@@ -1,0 +1,25 @@
+{
+    "id": "task_demo_001",
+    "scene_id": "indoor_scene_1",
+    "start_pose": {
+        "position": [0, 1.6, 0],
+        "rotation": [0, 0, 0, 1],
+        "fov": 60
+    },
+    "end_pose": {
+        "position": [5.0, 1.6, 8.0],
+        "rotation": [0, 0.707, 0, 0.707],
+        "fov": 60
+    },
+    "instructions": [
+        "Walk forward to the door",
+        "Turn left and enter the living room",
+        "Walk to the sofa",
+        "Stop next to the coffee table"
+    ],
+    "metadata": {
+        "difficulty": "easy",
+        "estimated_time": 30,
+        "category": "navigation"
+    }
+}

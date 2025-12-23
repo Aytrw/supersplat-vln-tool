@@ -1,0 +1,468 @@
+/**
+ * VLN Panel Styles
+ * 
+ * Integrated with SuperSplat's design system
+ * Position: Right side, next to the toolbar
+ */
+
+@use 'colors.scss' as *;
+
+// VLN Panel Main Container
+#vln-panel {
+    position: absolute;
+    right: 102px;
+    top: 102px;
+    width: 260px;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+    background-color: $bcg-primary;
+    border-radius: 8px;
+    z-index: 100;
+
+    &::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 3px;
+    }
+
+    &.vln-panel-collapsed {
+        max-height: none;
+    }
+}
+
+// Panel content container
+.vln-panel-content {
+    // Content area
+}
+
+// Collapsible section styles
+.vln-collapsible-section {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    &.collapsed {
+        .vln-collapsible-content {
+            display: none;
+        }
+    }
+}
+
+.vln-collapsible-header {
+    display: flex;
+    align-items: center;
+    padding: 6px 10px;
+    cursor: pointer;
+    background: $bcg-dark;
+    user-select: none;
+    transition: background-color 0.15s;
+
+    &:hover {
+        background: $bcg-darker;
+    }
+}
+
+.vln-collapse-icon {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: $text-secondary;
+    font-size: 12px;
+    margin-right: 6px;
+}
+
+.vln-collapsible-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: $text-secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.vln-collapsible-content {
+    padding: 8px 10px;
+}
+
+// Section styles (for inner components)
+.vln-section {
+    // No extra padding needed inside collapsible sections
+}
+
+.vln-section-header {
+    font-size: 11px;
+    font-weight: 600;
+    color: $text-secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.vln-section-header-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+// Task info
+.vln-task-info {
+    background: $bcg-dark;
+    border-radius: 4px;
+    padding: 8px;
+}
+
+.vln-info-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 4px;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.vln-info-label {
+    color: $text-secondary;
+    width: 55px;
+    flex-shrink: 0;
+    font-size: 11px;
+}
+
+.vln-info-value {
+    color: $text-primary;
+    font-family: monospace;
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+// Instruction list
+.vln-instruction-box {
+    // Remove extra padding, handled by collapsible content
+    padding: 0 !important;
+    border-bottom: none !important;
+}
+
+.vln-instruction-count {
+    color: $text-darkest;
+    font-size: 10px;
+}
+
+.vln-instruction-list {
+    max-height: 150px;
+    overflow-y: auto;
+    background: $bcg-dark;
+    border-radius: 4px;
+
+    &::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 2px;
+    }
+}
+
+.vln-instruction-empty {
+    color: $text-darkest;
+    text-align: center;
+    padding: 20px 10px;
+    font-style: italic;
+}
+
+.vln-instruction-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 8px 10px;
+    cursor: pointer;
+    transition: background-color 0.15s;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    &:hover {
+        background: $bcg-lighter;
+    }
+
+    &.vln-instruction-active {
+        background: rgba($clr-hilight, 0.2);
+        border-left: 3px solid $clr-hilight;
+        padding-left: 7px;
+    }
+}
+
+.vln-instruction-index {
+    color: $text-darkest;
+    width: 24px;
+    flex-shrink: 0;
+    font-weight: 600;
+}
+
+.vln-instruction-text {
+    color: $text-primary;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+// Camera settings
+.vln-camera-settings {
+    // No extra padding - handled by collapsible content
+}
+
+.vln-camera-fov-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.vln-camera-label {
+    color: $text-secondary;
+    width: 35px;
+    flex-shrink: 0;
+    font-size: 11px;
+}
+
+.vln-camera-fov-slider {
+    flex: 1;
+    min-width: 60px;
+}
+
+.vln-camera-fov-input {
+    width: 45px;
+}
+
+.vln-camera-fov-unit {
+    color: $text-secondary;
+}
+
+.vln-camera-pose-buttons {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.vln-camera-btn {
+    flex: 1;
+    min-width: 70px;
+    padding: 5px 6px;
+    font-size: 10px;
+    background: $bcg-lighter;
+    border: none;
+    border-radius: 4px;
+    color: $text-primary;
+    cursor: pointer;
+    transition: background-color 0.15s;
+
+    &:hover {
+        background: $bcg-light;
+    }
+
+    &:active {
+        background: $bcg-light;
+    }
+
+    &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+}
+
+// Recording controls
+.vln-recorder-controls {
+    &.recording {
+        .vln-recorder-status-label {
+            color: $error;
+        }
+    }
+
+    &.paused {
+        .vln-recorder-status-label {
+            color: $clr-hilight;
+        }
+    }
+}
+
+.vln-recorder-buttons {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.vln-recorder-btn {
+    flex: 1;
+    padding: 6px 4px;
+    font-size: 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+
+    &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+}
+
+.vln-recorder-btn-record {
+    background: rgba($error, 0.2);
+    color: $error;
+
+    &:hover:not(:disabled) {
+        background: rgba($error, 0.3);
+    }
+}
+
+.vln-recorder-btn-pause {
+    background: rgba($clr-hilight, 0.2);
+    color: $clr-hilight;
+
+    &:hover:not(:disabled) {
+        background: rgba($clr-hilight, 0.3);
+    }
+}
+
+.vln-recorder-btn-stop {
+    background: $bcg-lighter;
+    color: $text-primary;
+
+    &:hover:not(:disabled) {
+        background: $bcg-light;
+    }
+}
+
+.vln-recorder-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.vln-recorder-label {
+    color: $text-secondary;
+    width: 40px;
+}
+
+.vln-recorder-select {
+    flex: 1;
+}
+
+.vln-recorder-status {
+    margin-bottom: 4px;
+}
+
+.vln-recorder-status-label {
+    color: $text-secondary;
+    font-size: 11px;
+}
+
+.vln-recorder-stats {
+    display: flex;
+    gap: 8px;
+}
+
+.vln-recorder-stat {
+    color: $text-darkest;
+    font-size: 11px;
+    font-family: monospace;
+}
+
+// Action buttons
+.vln-action-buttons {
+    display: flex;
+    gap: 4px;
+    padding: 8px 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.vln-action-button {
+    flex: 1;
+    padding: 6px 4px;
+    font-size: 10px;
+    background: rgba($clr-hilight, 0.2);
+    border: none;
+    border-radius: 4px;
+    color: $clr-hilight;
+    cursor: pointer;
+    transition: background-color 0.15s;
+
+    &:hover {
+        background: rgba($clr-hilight, 0.3);
+    }
+
+    &.vln-action-button-danger {
+        background: rgba($error, 0.15);
+        color: $error;
+
+        &:hover {
+            background: rgba($error, 0.25);
+        }
+    }
+}
+
+// VLN Toolbar (kept for potential future use)
+#vln-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.vln-toolbar-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: $bcg-lighter;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+
+    svg {
+        width: 18px;
+        height: 18px;
+        color: $text-secondary;
+    }
+
+    &:hover {
+        background: $bcg-light;
+    }
+
+    &.active {
+        background: rgba($clr-hilight, 0.3);
+
+        svg {
+            color: $clr-hilight;
+        }
+    }
+
+    &.recording {
+        animation: pulse-recording 1s infinite;
+    }
+}
+
+@keyframes pulse-recording {
+    0%, 100% {
+        background: rgba($error, 0.2);
+    }
+    50% {
+        background: rgba($error, 0.4);
+    }
+}

@@ -15,6 +15,7 @@ import { getSceneConfig } from './scene-config';
 import { registerSelectionEvents } from './selection';
 import { Shortcuts } from './shortcuts';
 import { registerTimelineEvents } from './timeline';
+import { registerVLNEvents } from './vln';
 import { BoxSelection } from './tools/box-selection';
 import { BrushSelection } from './tools/brush-selection';
 import { EyedropperSelection } from './tools/eyedropper-selection';
@@ -261,6 +262,7 @@ const main = async () => {
     registerDocEvents(scene, events);
     registerRenderEvents(scene, events);
     registerIframeApi(events);
+    registerVLNEvents(events, scene);  // VLN 事件注册
     initShortcuts(events);
     initFileHandler(scene, events, editorUI.appContainer.dom);
 

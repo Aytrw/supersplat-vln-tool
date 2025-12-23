@@ -1,0 +1,515 @@
+/**
+ * VLN HUD Overlay Styles
+ * 
+ * Consistent with SuperSplat's native UI design system
+ * Uses the same colors, backgrounds, and border-radius as other panels
+ */
+
+@use 'colors.scss' as *;
+
+// ============================================================================
+// HUD Overlay Container - Full screen transparent layer
+// ============================================================================
+#vln-hud-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none; // Allow mouse events to pass through to 3D canvas
+    z-index: 90; // Below tooltips (100)
+    overflow: hidden;
+}
+
+// ============================================================================
+// Common HUD Panel Styles - Matching SuperSplat's panel style
+// ============================================================================
+.vln-hud-panel {
+    pointer-events: auto;
+    background-color: $bcg-dark;
+    border-radius: 8px;
+    color: $text-primary;
+    font-size: 12px;
+}
+
+// ============================================================================
+// Module A: Instruction Panel (Bottom-Left, above bottom toolbar)
+// Position adjusted to avoid scene-panel (left: 24px, width: 320px)
+// ============================================================================
+#vln-instruction-panel {
+    position: absolute;
+    left: 360px; // Right of scene-panel (24 + 320 + 16 gap)
+    bottom: 100px; // Above bottom toolbar (24 + 54 + gap)
+    width: 280px;
+    max-height: 180px;
+    display: flex;
+    flex-direction: column;
+
+    .vln-hud-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        background-color: $bcg-darker;
+        border-radius: 8px 8px 0 0;
+        flex-shrink: 0;
+    }
+
+    .vln-hud-header-icon {
+        font-family: pc-icon;
+        font-size: 12px;
+        color: $clr-hilight;
+    }
+
+    .vln-hud-header-title {
+        font-size: 11px;
+        font-weight: bold;
+        color: $text-primary;
+        text-transform: uppercase;
+    }
+
+    .vln-hud-header-badge {
+        margin-left: auto;
+        padding: 1px 6px;
+        background: $bcg-primary;
+        border-radius: 8px;
+        font-size: 10px;
+        color: $clr-hilight;
+    }
+}
+
+.vln-instruction-content {
+    padding: 8px 10px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    background-color: $bcg-dark;
+    border-radius: 0 0 8px 8px;
+
+    &::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: $bcg-lighter;
+        border-radius: 2px;
+    }
+}
+
+.vln-instruction-text {
+    font-size: 12px;
+    line-height: 1.5;
+    color: $text-primary;
+    margin: 0;
+}
+
+.vln-instruction-empty {
+    font-size: 11px;
+    color: $text-darkest;
+    font-style: italic;
+    text-align: center;
+    padding: 16px 0;
+}
+
+.vln-instruction-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid $bcg-primary;
+    cursor: pointer;
+    transition: background-color 0.15s;
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    &:hover {
+        background: $bcg-primary;
+        margin: 0 -10px;
+        padding: 6px 10px;
+    }
+
+    &.active {
+        background: $bcg-primary;
+        margin: 0 -10px;
+        padding: 6px 10px;
+        border-left: 2px solid $clr-hilight;
+    }
+}
+
+.vln-instruction-step-index {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: $bcg-primary;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 600;
+    color: $text-secondary;
+}
+
+.vln-instruction-step-text {
+    flex: 1;
+    font-size: 11px;
+    line-height: 1.4;
+    color: $text-primary;
+}
+
+// ============================================================================
+// Module B: Recorder Control Bar (Bottom-Center, above bottom toolbar)
+// ============================================================================
+#vln-recorder-bar {
+    position: absolute;
+    left: 50%;
+    bottom: 100px; // Above bottom toolbar
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+}
+
+// Status indicator light
+.vln-recorder-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: $text-darkest;
+    transition: all 0.3s ease;
+
+    &.idle {
+        background: $text-darkest;
+    }
+
+    &.recording {
+        background: $error;
+        box-shadow: 0 0 6px rgba($error, 0.6);
+        animation: pulse-indicator 1s infinite;
+    }
+
+    &.paused {
+        background: $clr-hilight;
+    }
+}
+
+@keyframes pulse-indicator {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+// Recorder buttons - matching bottom-toolbar style
+.vln-recorder-btn-group {
+    display: flex;
+    gap: 2px;
+}
+
+.vln-recorder-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: $bcg-primary;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: $clr-default;
+    font-family: pc-icon;
+    font-size: 14px;
+
+    &:hover:not(:disabled) {
+        background: $bcg-lighter;
+    }
+
+    &:disabled {
+        color: $clr-disabled;
+        cursor: not-allowed;
+    }
+
+    // Record button
+    &.record-btn {
+        color: $error;
+
+        &:hover:not(:disabled) {
+            background: rgba($error, 0.2);
+        }
+
+        &.active {
+            background: $error;
+            color: white;
+        }
+    }
+}
+
+// Timer display
+.vln-recorder-timer {
+    font-family: monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: $text-primary;
+    min-width: 60px;
+    text-align: center;
+}
+
+// Frame counter
+.vln-recorder-frames {
+    font-size: 10px;
+    color: $text-secondary;
+    padding-left: 8px;
+    border-left: 1px solid $bcg-primary;
+}
+
+// Separator
+.vln-recorder-separator {
+    width: 1px;
+    height: 20px;
+    background: $bcg-primary;
+}
+
+// ============================================================================
+// Module C: Auxiliary View Placeholder (Top-Right, left of right toolbar)
+// ============================================================================
+#vln-auxiliary-view {
+    position: absolute;
+    right: 100px; // Left of right toolbar (24 + 54 + gap)
+    top: 24px;
+    width: 200px;
+    aspect-ratio: 16 / 9;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    .vln-hud-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        background-color: $bcg-darker;
+        border-radius: 8px 8px 0 0;
+        flex-shrink: 0;
+    }
+
+    .vln-hud-header-icon {
+        font-family: pc-icon;
+        font-size: 11px;
+        color: $clr-hilight;
+    }
+
+    .vln-hud-header-title {
+        font-size: 10px;
+        font-weight: bold;
+        color: $text-primary;
+        text-transform: uppercase;
+    }
+}
+
+.vln-auxiliary-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: $bcg-darkest;
+    border-radius: 0 0 8px 8px;
+    position: relative;
+}
+
+.vln-auxiliary-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: $text-darkest;
+}
+
+.vln-auxiliary-placeholder-icon {
+    font-family: pc-icon;
+    font-size: 20px;
+}
+
+.vln-auxiliary-placeholder-text {
+    font-size: 9px;
+    text-transform: uppercase;
+}
+
+// Corner markers
+.vln-auxiliary-content::before,
+.vln-auxiliary-content::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-color: $bcg-lighter;
+    border-style: solid;
+    border-width: 0;
+}
+
+.vln-auxiliary-content::before {
+    top: 6px;
+    left: 6px;
+    border-top-width: 1px;
+    border-left-width: 1px;
+}
+
+.vln-auxiliary-content::after {
+    bottom: 6px;
+    right: 6px;
+    border-bottom-width: 1px;
+    border-right-width: 1px;
+}
+
+// ============================================================================
+// Task Info Badge (Top-Left, below menu area)
+// ============================================================================
+#vln-task-badge {
+    position: absolute;
+    left: 24px;
+    top: 60px; // Below menu
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+}
+
+.vln-task-badge-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.vln-task-badge-label {
+    font-size: 9px;
+    color: $text-darkest;
+    text-transform: uppercase;
+}
+
+.vln-task-badge-value {
+    font-size: 11px;
+    font-weight: 500;
+    color: $text-primary;
+    font-family: monospace;
+}
+
+.vln-task-badge-separator {
+    width: 1px;
+    height: 12px;
+    background: $bcg-primary;
+}
+
+// ============================================================================
+// FOV Indicator (Bottom-Right, above bottom toolbar, left of right toolbar)
+// ============================================================================
+#vln-fov-indicator {
+    position: absolute;
+    right: 100px; // Left of right toolbar
+    bottom: 100px; // Above bottom toolbar
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+}
+
+.vln-fov-label {
+    font-size: 9px;
+    color: $text-darkest;
+    text-transform: uppercase;
+}
+
+.vln-fov-value {
+    font-size: 12px;
+    font-weight: 500;
+    color: $text-primary;
+    font-family: monospace;
+    min-width: 32px;
+}
+
+.vln-fov-slider {
+    width: 60px;
+    height: 4px;
+    background: $bcg-primary;
+    border-radius: 2px;
+    position: relative;
+    cursor: pointer;
+
+    &::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        background: $clr-hilight;
+        border-radius: 2px;
+        width: var(--fov-percent, 50%);
+    }
+}
+
+.vln-fov-slider-thumb {
+    position: absolute;
+    top: 50%;
+    left: var(--fov-percent, 50%);
+    transform: translate(-50%, -50%);
+    width: 10px;
+    height: 10px;
+    background: $text-primary;
+    border-radius: 50%;
+    cursor: grab;
+
+    &:active {
+        cursor: grabbing;
+    }
+}
+
+// ============================================================================
+// Quick Action Buttons (positioned near recorder bar)
+// ============================================================================
+.vln-quick-actions {
+    position: absolute;
+    left: 50%;
+    bottom: 145px; // Above recorder bar
+    transform: translateX(-50%);
+    display: flex;
+    gap: 4px;
+}
+
+.vln-quick-action-btn {
+    padding: 4px 10px;
+    background: $bcg-primary;
+    border: none;
+    border-radius: 4px;
+    font-size: 10px;
+    color: $text-secondary;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    pointer-events: auto;
+
+    &:hover {
+        background: $bcg-lighter;
+        color: $text-primary;
+    }
+
+    &.primary {
+        background: rgba($clr-hilight, 0.2);
+        color: $clr-hilight;
+
+        &:hover {
+            background: rgba($clr-hilight, 0.3);
+        }
+    }
+
+    &.danger {
+        color: $error;
+
+        &:hover {
+            background: rgba($error, 0.2);
+        }
+    }
+}

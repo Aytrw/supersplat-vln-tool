@@ -23,6 +23,7 @@ import { Tooltips } from './tooltips';
 import { VideoSettingsDialog } from './video-settings-dialog';
 import { ViewCube } from './view-cube';
 import { ViewPanel } from './view-panel';
+import { VLNHudOverlay } from './vln';
 import { version } from '../../package.json';
 
 // ts compiler and vscode find this type, but eslint does not
@@ -126,6 +127,9 @@ class EditorUI {
         const modeToggle = new ModeToggle(events, tooltips);
         const menu = new Menu(events);
 
+        // VLN HUD Overlay - Immersive overlay mode
+        const vlnHudOverlay = new VLNHudOverlay(events, tooltips);
+
         canvasContainer.dom.appendChild(canvas);
         canvasContainer.append(appLabel);
         canvasContainer.append(cursorLabel);
@@ -137,6 +141,7 @@ class EditorUI {
         canvasContainer.append(rightToolbar);
         canvasContainer.append(modeToggle);
         canvasContainer.append(menu);
+        canvasContainer.append(vlnHudOverlay);  // VLN HUD overlay
 
         // view axes container
         const viewCube = new ViewCube(events);
