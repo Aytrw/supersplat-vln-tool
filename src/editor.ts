@@ -134,6 +134,24 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         return scene.camera.fov;
     });
 
+    // Whether `camera.fov` represents horizontal FOV (SuperSplat sets this based on viewport orientation)
+    events.function('camera.horizontalFov', () => {
+        return scene.camera.entity?.camera?.horizontalFov ?? false;
+    });
+
+    // Viewport aspect ratio based on internal render target size (more stable than DOM at startup)
+    events.function('camera.aspect', () => {
+        const w = scene.targetSize?.width ?? 0;
+        const h = scene.targetSize?.height ?? 0;
+        return (w > 0 && h > 0) ? (w / h) : 1;
+    });
+
+    events.function('camera.aspectReady', () => {
+        const w = scene.targetSize?.width ?? 0;
+        const h = scene.targetSize?.height ?? 0;
+        return w > 0 && h > 0;
+    });
+
     events.on('camera.setFov', (fov: number) => {
         setCameraFov(fov);
     });

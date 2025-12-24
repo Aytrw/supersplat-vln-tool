@@ -30,6 +30,7 @@ class AuxiliaryView extends Container {
     // UI elements
     private contentContainer: Container;
     private fovIndicator: FOVIndicator;
+    private placeholder?: Container;
 
     constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
@@ -68,7 +69,8 @@ class AuxiliaryView extends Container {
             class: 'vln-fov-toggle-btn'
         });
         this.fovToggleBtn.dom.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>`;
-        this.fovToggleBtn.dom.title = '展开 FOV 调节';
+        // Use the shared tooltip system (matches SuperSplat)
+        this.tooltips.register(this.fovToggleBtn, 'FOV 调节', 'left');
         this.fovToggleBtn.dom.addEventListener('click', (e: Event) => {
             e.stopPropagation();
             this.toggleFovPanel();
@@ -84,6 +86,7 @@ class AuxiliaryView extends Container {
         const placeholder = new Container({
             class: 'vln-auxiliary-placeholder'
         });
+        this.placeholder = placeholder;
 
         const placeholderIcon = new Element({
             class: 'vln-auxiliary-placeholder-icon'
@@ -113,8 +116,20 @@ class AuxiliaryView extends Container {
     private toggleFovPanel(): void {
         this.fovExpanded = !this.fovExpanded;
         this.fovIndicator.hidden = !this.fovExpanded;
+
+        // Hard guarantee: placeholder should never render above the expanded panel.
+        // (z-index/stacking contexts can vary depending on how content is swapped)
+        if (this.placeholder) {
+            this.placeholder.hidden = this.fovExpanded;
+        }
+
+        if (this.fovExpanded) {
+            this.class.add('fov-expanded');
+        } else {
+            this.class.remove('fov-expanded');
+        }
+
         if (this.fovToggleBtn) {
-            this.fovToggleBtn.dom.title = this.fovExpanded ? '收起 FOV 调节' : '展开 FOV 调节';
             if (this.fovExpanded) {
                 this.fovToggleBtn.class.add('expanded');
             } else {
@@ -133,6 +148,7 @@ class AuxiliaryView extends Container {
     setVideoElement(videoElement: HTMLVideoElement): void {
         // Clear placeholder
         this.contentContainer.dom.innerHTML = '';
+        this.placeholder = undefined;
         
         // Add video element
         videoElement.style.width = '100%';
@@ -147,6 +163,7 @@ class AuxiliaryView extends Container {
     setCanvasElement(canvas: HTMLCanvasElement): void {
         // Clear placeholder
         this.contentContainer.dom.innerHTML = '';
+        this.placeholder = undefined;
         
         // Add canvas element
         canvas.style.width = '100%';
@@ -168,6 +185,7 @@ class AuxiliaryView extends Container {
         const placeholder = new Container({
             class: 'vln-auxiliary-placeholder'
         });
+        this.placeholder = placeholder;
 
         const placeholderIcon = new Label({
             text: '\uE80E',
@@ -184,6 +202,15 @@ class AuxiliaryView extends Container {
         this.contentContainer.append(placeholder);
 
         this.append(this.contentContainer);
+
+        // Ensure toggle + panel stay above the content after rebuilding.
+        if (this.fovToggleBtn) this.append(this.fovToggleBtn);
+        this.append(this.fovIndicator);
+
+        // Keep placeholder hidden if panel is currently expanded.
+        if (this.placeholder) {
+            this.placeholder.hidden = this.fovExpanded;
+        }
     }
 }
 

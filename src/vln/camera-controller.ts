@@ -73,15 +73,84 @@ class CameraController {
             this.setPose(pose);
         });
 
-        // 监听 FOV 设置事件
+        // 监听 FOV 设置事件（来自其他模块的指令）
         this.events.on(VLNEventNames.CAMERA_SET_FOV, (fov: number) => {
             this.setFov(fov);
+        });
+
+        // 监听 FOV 变化事件（来自 UI 滑块拖动）
+        this.events.on(VLNEventNames.FOV_CHANGE, (fov: number) => {
+            this.setFov(fov);
+        });
+
+        // 监听场景相机 FOV 变化（保持同步）
+        this.events.on('camera.fov', (fov: number) => {
+            // `camera.fov` 在 SuperSplat 内部是“长边FOV”（横屏时等价于水平FOV）
+            // VLN 侧我们用“真实相机 FOV”（默认按垂直FOV理解）
+            this.settings.fov = this.sceneFovToRealFov(fov);
+            this.events.fire(VLNEventNames.FOV_CHANGED, this.settings.fov);
         });
 
         // 注册函数接口
         this.events.function('vln.camera.pose', () => this.getPose());
         this.events.function('vln.camera.settings', () => this.settings);
         this.events.function('vln.camera.motionMode', () => this.motionMode);
+        this.events.function('vln.camera.fov', () => this.getFov());
+    }
+
+    // ========================================================================
+    // FOV Conversion (Real vertical FOV <-> Scene long-axis FOV)
+    // ========================================================================
+
+    private getViewportAspect(): number {
+        const width = this.scene.targetSize?.width ?? 0;
+        const height = this.scene.targetSize?.height ?? 0;
+        return (width > 0 && height > 0) ? (width / height) : 1;
+    }
+
+    /**
+     * 将“真实相机FOV（默认垂直FOV）”转换为 SuperSplat 场景相机使用的 FOV。
+     * SuperSplat 在横屏时设置 `camera.horizontalFov = true`，此时 `camera.fov` 表示水平FOV。
+     */
+    private realFovToSceneFov(realVerticalFovDeg: number): number {
+        const cameraComponent = this.scene.camera?.entity?.camera;
+        if (!cameraComponent) {
+            return realVerticalFovDeg;
+        }
+
+        const aspect = this.getViewportAspect();
+
+        // 横屏：scene.fov 表示水平FOV，需要把垂直FOV换算成水平FOV
+        if (cameraComponent.horizontalFov) {
+            const vfov = realVerticalFovDeg * math.DEG_TO_RAD;
+            const hfov = 2 * Math.atan(Math.tan(vfov * 0.5) * aspect);
+            return hfov * math.RAD_TO_DEG;
+        }
+
+        // 竖屏：scene.fov 表示垂直FOV，直接使用
+        return realVerticalFovDeg;
+    }
+
+    /**
+     * 将 SuperSplat 场景相机 FOV（长边FOV）转换回“真实相机FOV（默认垂直FOV）”。
+     */
+    private sceneFovToRealFov(sceneFovDeg: number): number {
+        const cameraComponent = this.scene.camera?.entity?.camera;
+        if (!cameraComponent) {
+            return sceneFovDeg;
+        }
+
+        const aspect = this.getViewportAspect();
+
+        // 横屏：scene.fov 是水平FOV，要换算成垂直FOV
+        if (cameraComponent.horizontalFov) {
+            const hfov = sceneFovDeg * math.DEG_TO_RAD;
+            const vfov = 2 * Math.atan(Math.tan(hfov * 0.5) / aspect);
+            return vfov * math.RAD_TO_DEG;
+        }
+
+        // 竖屏：scene.fov 就是垂直FOV
+        return sceneFovDeg;
     }
 
     // ========================================================================
@@ -183,26 +252,43 @@ class CameraController {
 
     /**
      * 设置相机 FOV
+     * @param fov 视场角（度），范围 10-120
      */
     setFov(fov: number): void {
-        // TODO: 实现 FOV 设置
-        console.log('VLN: CameraController.setFov - not fully implemented', fov);
+        // 这里的 fov 视为“真实相机FOV”（默认按垂直FOV理解）
+        const realFov = math.clamp(fov, 10, 120);
 
-        // 限制 FOV 范围
-        fov = math.clamp(fov, 10, 120);
-        this.settings.fov = fov;
+        // 避免重复设置（按 realFov 比较）
+        if (realFov === this.settings.fov) {
+            return;
+        }
 
-        // 调用现有的 FOV 设置事件
-        this.events.fire('camera.setFov', fov);
+        this.settings.fov = realFov;
+
+        // 转换为场景相机实际使用的 FOV（横屏时为水平FOV）
+        const sceneFov = this.realFovToSceneFov(realFov);
+
+        // 调用 SuperSplat 原生的 FOV 设置事件
+        this.events.fire('camera.setFov', sceneFov);
+
+        // 通知其他 VLN 组件 FOV 已变化（广播 realFov，供 UI 显示）
+        this.events.fire(VLNEventNames.FOV_CHANGED, realFov);
     }
 
     /**
      * 获取当前 FOV
      */
     getFov(): number {
-        // 从场景相机获取
+        // VLN 侧对外暴露“真实相机FOV”（默认按垂直FOV理解）。
+        // SuperSplat 场景相机的 `camera.fov` 在横屏时是水平FOV，需要换算回垂直FOV。
         const sceneFov = this.events.invoke('camera.fov');
-        return sceneFov ?? this.settings.fov;
+        if (typeof sceneFov === 'number' && sceneFov > 0) {
+            const real = this.sceneFovToRealFov(sceneFov);
+            this.settings.fov = real;
+            return real;
+        }
+
+        return this.settings.fov;
     }
 
     // ========================================================================
