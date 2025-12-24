@@ -44,7 +44,38 @@ class DataLoader {
      * 注册事件处理器
      */
     private registerEvents(): void {
-        // 可以在这里注册文件拖放等事件
+        // UI: 导入任务（JSON）
+        this.events.on('vln.ui.importTask', async () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'application/json,.json';
+            input.multiple = false;
+
+            input.addEventListener('change', async () => {
+                const file = input.files?.[0];
+                if (!file) return;
+
+                try {
+                    const text = await file.text();
+                    const data = JSON.parse(text) as VLNTaskImport;
+                    this.events.fire(VLNEventNames.TASK_LOAD, data);
+                } catch (error) {
+                    console.error('VLN: Failed to import task', error);
+                    // 如果宿主提供了 popup，则提示；否则仅控制台报错
+                    try {
+                        await this.events.invoke('showPopup', {
+                            type: 'error',
+                            header: '导入失败',
+                            message: `无法解析任务文件：${file.name}`
+                        });
+                    } catch {
+                        // ignore
+                    }
+                }
+            });
+
+            input.click();
+        });
     }
 
     // ========================================================================

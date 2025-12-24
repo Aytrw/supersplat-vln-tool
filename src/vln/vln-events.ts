@@ -11,6 +11,7 @@ import { PathRecorder } from './path-recorder';
 import { CameraController } from './camera-controller';
 import { PathVisualizer } from './path-visualizer';
 import { DataLoader } from './data-loader';
+import { FlyControls } from './fly-controls';
 
 /**
  * VLN 模块实例容器
@@ -21,6 +22,7 @@ interface VLNModules {
     cameraController: CameraController;
     visualizer: PathVisualizer;
     dataLoader: DataLoader;
+    flyControls: FlyControls;
 }
 
 let vlnModules: VLNModules | null = null;
@@ -37,6 +39,7 @@ function registerVLNEvents(events: Events, scene: Scene): VLNModules {
     const cameraController = new CameraController(events, scene);
     const visualizer = new PathVisualizer(events, scene);
     const dataLoader = new DataLoader(events);
+    const flyControls = new FlyControls(events, scene);
 
     // 初始化模块
     manager.initialize();
@@ -44,6 +47,7 @@ function registerVLNEvents(events: Events, scene: Scene): VLNModules {
     cameraController.initialize();
     visualizer.initialize();
     dataLoader.initialize();
+    flyControls.initialize();
 
     // 保存模块引用
     vlnModules = {
@@ -51,7 +55,8 @@ function registerVLNEvents(events: Events, scene: Scene): VLNModules {
         recorder,
         cameraController,
         visualizer,
-        dataLoader
+        dataLoader,
+        flyControls
     };
 
     // 注册全局函数
@@ -72,6 +77,7 @@ function destroyVLNModules(): void {
         vlnModules.cameraController.destroy();
         vlnModules.visualizer.destroy();
         vlnModules.dataLoader.destroy();
+        vlnModules.flyControls.destroy();
         vlnModules = null;
     }
 }

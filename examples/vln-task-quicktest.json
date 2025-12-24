@@ -1,0 +1,47 @@
+{
+  "id": "task_quicktest_001",
+  "scene_id": "scene_quicktest",
+  "start_pose": {
+    "position": [0.0, 1.6, 3.0],
+    "rotation": [0.0, 0.0, 0.0, 1.0],
+    "fov": 60
+  },
+  "end_pose": {
+    "position": [2.0, 1.6, 0.0],
+    "rotation": [0.0, 0.7071068, 0.0, 0.7071068],
+    "fov": 60
+  },
+  "instructions": [
+    "向前走到中心区域",
+    "向右转，朝右侧移动",
+    "停在目标点附近"
+  ],
+  "reference_path": {
+    "points": [
+      {
+        "position": [0.0, 1.6, 3.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "instruction_index": 0
+      },
+      {
+        "position": [0.0, 1.6, 1.5],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "instruction_index": 0
+      },
+      {
+        "position": [1.0, 1.6, 1.0],
+        "rotation": [0.0, 0.3826834, 0.0, 0.9238795],
+        "instruction_index": 1
+      },
+      {
+        "position": [2.0, 1.6, 0.0],
+        "rotation": [0.0, 0.7071068, 0.0, 0.7071068],
+        "instruction_index": 2
+      }
+    ]
+  },
+  "metadata": {
+    "note": "quick test task for start_pose + instructions",
+    "created_at": "2025-12-24"
+  }
+}

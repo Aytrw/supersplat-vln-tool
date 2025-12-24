@@ -157,38 +157,63 @@ class CameraController {
     // 位姿控制
     // ========================================================================
 
+    private getCurrentCameraDistanceFallback(): number {
+        const current = this.events.invoke('camera.getPose') as any;
+        if (current?.position && current?.target) {
+            const p = current.position;
+            const t = current.target;
+            const dx = (t.x ?? 0) - (p.x ?? 0);
+            const dy = (t.y ?? 0) - (p.y ?? 0);
+            const dz = (t.z ?? 0) - (p.z ?? 0);
+            const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            if (isFinite(d) && d > 1e-4) return d;
+        }
+        return 1;
+    }
+
+    private poseToScenePose(pose: CameraPose): { position: Vec3; target: Vec3 } {
+        const position = new Vec3(pose.position.x, pose.position.y, pose.position.z);
+
+        // 将 quaternion 解释为相机的世界旋转，并用它把“相机前方方向”转换到世界空间。
+        const q = new Quat(pose.rotation.x, pose.rotation.y, pose.rotation.z, pose.rotation.w);
+        q.normalize();
+
+        const forward = new Vec3(0, 0, -1);
+        q.transformVector(forward, forward);
+
+        // 目标点距离：沿用当前相机 distance，避免跳到极近/极远导致观感不一致。
+        const distance = this.getCurrentCameraDistanceFallback();
+        const target = position.clone().add(forward.mulScalar(distance));
+
+        return { position, target };
+    }
+
     /**
      * 设置相机位姿
      */
     setPose(pose: CameraPose, animate: boolean = true): void {
-        // TODO: 实现相机位姿设置逻辑
-        console.log('VLN: CameraController.setPose - not fully implemented', pose);
-
         if (animate && this.animationDuration > 0) {
-            this.animateToPose(pose);
-        } else {
-            this.setImmediatePose(pose);
+            // 当前先复用 SuperSplat 的阻尼过渡（speed=1），避免自写插值引入旋转不一致。
+            this.setImmediatePose(pose, 1);
+            return;
         }
+
+        this.setImmediatePose(pose, 0);
     }
 
     /**
      * 立即设置相机位姿（无动画）
      */
-    private setImmediatePose(pose: CameraPose): void {
-        // TODO: 实现立即设置位姿
-        console.log('VLN: setImmediatePose - not fully implemented');
-
-        // 设置 FOV
+    private setImmediatePose(pose: CameraPose, speed: number): void {
+        // FOV：VLN pose.fov 作为“真实相机FOV（默认垂直FOV）”处理
         if (pose.fov !== undefined) {
             this.setFov(pose.fov);
         }
 
-        // 这里需要调用 scene.camera 的相关方法
-        // 例如:
-        // const camera = this.scene.camera;
-        // camera.entity.setPosition(pose.position.x, pose.position.y, pose.position.z);
-        // camera.entity.setRotation(new Quat(pose.rotation.x, pose.rotation.y, pose.rotation.z, pose.rotation.w));
+        const scenePose = this.poseToScenePose(pose);
+        this.events.fire('camera.setPose', scenePose, speed);
 
+        // 广播给 VLN UI/其他模块
         this.events.fire(VLNEventNames.CAMERA_POSE_SET, pose);
     }
 
@@ -223,7 +248,7 @@ class CameraController {
                 requestAnimationFrame(animate);
             } else {
                 this.isAnimating = false;
-                this.setImmediatePose(targetPose);
+                this.setImmediatePose(targetPose, 0);
             }
         };
 
@@ -234,15 +259,21 @@ class CameraController {
      * 获取当前相机位姿
      */
     getPose(): CameraPose {
-        // TODO: 实现从场景相机获取位姿
-        console.log('VLN: CameraController.getPose - not fully implemented');
+        // 目前 SuperSplat 对外只暴露 position+target，因此这里先回传 position，rotation 保持单位四元数。
+        // VLN 的“设置位姿”走 setPose()，无需依赖 getPose() 的 rotation 来工作。
+        const current = this.events.invoke('camera.getPose') as any;
+        if (current?.position) {
+            return {
+                position: { x: current.position.x, y: current.position.y, z: current.position.z },
+                rotation: { x: 0, y: 0, z: 0, w: 1 },
+                fov: this.getFov()
+            };
+        }
 
-        // 占位实现
-        // 实际应该从 this.scene.camera 获取
         return {
             position: { x: 0, y: 0, z: 0 },
             rotation: { x: 0, y: 0, z: 0, w: 1 },
-            fov: this.settings.fov
+            fov: this.getFov()
         };
     }
 

@@ -19,6 +19,7 @@ class TaskBadge extends Container {
     // UI elements
     private taskIdValue: Label;
     private sceneIdValue: Label;
+    private flyModeValue: Label;
 
     constructor(events: Events, args = {}) {
         args = {
@@ -90,6 +91,31 @@ class TaskBadge extends Container {
         sceneItem.append(sceneLabel);
         sceneItem.append(this.sceneIdValue);
         this.append(sceneItem);
+
+        // Separator
+        const separator2 = new Container({
+            class: 'vln-task-badge-separator'
+        });
+        this.append(separator2);
+
+        // Fly mode hint
+        const flyItem = new Container({
+            class: 'vln-task-badge-item'
+        });
+
+        const flyLabel = new Label({
+            text: '飞行',
+            class: 'vln-task-badge-label'
+        });
+
+        this.flyModeValue = new Label({
+            text: '关',
+            class: 'vln-task-badge-value'
+        });
+
+        flyItem.append(flyLabel);
+        flyItem.append(this.flyModeValue);
+        this.append(flyItem);
     }
 
     /**
@@ -106,6 +132,13 @@ class TaskBadge extends Container {
         this.events.on(VLNEventNames.TASK_CLEARED, () => {
             this.clearTaskInfo();
             this.hidden = true;
+        });
+
+        // Fly mode status
+        this.events.on('vln.camera.flyMode', (enabled: boolean) => {
+            if (this.flyModeValue) {
+                this.flyModeValue.text = enabled ? '开' : '关';
+            }
         });
     }
 

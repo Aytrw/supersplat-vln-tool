@@ -296,10 +296,7 @@ class VLNManager {
      * 设置相机位姿
      */
     setCameraPose(pose: CameraPose): void {
-        // TODO: 实现相机位姿设置逻辑
-        console.log('VLN: setCameraPose - not fully implemented', pose);
-
-        // 这里将调用 camera-controller 的接口
+        // 统一的“位姿已设置”广播：具体落地由 CameraController 响应 CAMERA_SET_POSE 完成。
         this.events.fire(VLNEventNames.CAMERA_POSE_SET, pose);
     }
 
@@ -307,11 +304,9 @@ class VLNManager {
      * 跳转到起始位姿
      */
     gotoStartPose(): void {
-        // TODO: 实现跳转到起始位姿逻辑
-        console.log('VLN: gotoStartPose - not fully implemented');
-
         if (this.currentTask?.startPose) {
-            this.setCameraPose(this.currentTask.startPose);
+            // 触发统一入口事件：CameraController 会执行实际相机跳转。
+            this.events.fire(VLNEventNames.CAMERA_SET_POSE, this.currentTask.startPose);
         }
     }
 
@@ -319,11 +314,8 @@ class VLNManager {
      * 跳转到结束位姿
      */
     gotoEndPose(): void {
-        // TODO: 实现跳转到结束位姿逻辑
-        console.log('VLN: gotoEndPose - not fully implemented');
-
         if (this.currentTask?.endPose) {
-            this.setCameraPose(this.currentTask.endPose);
+            this.events.fire(VLNEventNames.CAMERA_SET_POSE, this.currentTask.endPose);
         }
     }
 
