@@ -35,10 +35,6 @@ class FlyControls {
     private readonly baseLookSensitivityDegPerPx = 0.12;
     private readonly keyboardLookDegPerSec = 120;
 
-    private readonly gamepadDeadzone = 0.12;
-    private readonly gamepadLookDegPerSec = 180;
-    private readonly gamepadSpeedBoostMultiplier = 2.5;
-
     // Bound handlers (for remove)
     private onKeyDownCapture = (e: KeyboardEvent) => this.handleKey(e, true);
     private onKeyUpCapture = (e: KeyboardEvent) => this.handleKey(e, false);
@@ -180,6 +176,10 @@ class FlyControls {
         e.preventDefault();
         e.stopPropagation();
 
+        if (down && !e.repeat) {
+            this.events.fire('vln.camera.flyInput', { key: keyLower });
+        }
+
         if (down) {
             this.keyDown.add(keyLower);
         } else {
@@ -258,56 +258,6 @@ class FlyControls {
         return base * multiplier;
     }
 
-    private applyDeadzone(value: number, deadzone: number): number {
-        const v = Math.abs(value) < deadzone ? 0 : value;
-        // re-scale outside deadzone for smoother control
-        if (v === 0) return 0;
-        const sign = Math.sign(v);
-        const mag = (Math.abs(v) - deadzone) / (1 - deadzone);
-        return sign * math.clamp(mag, 0, 1);
-    }
-
-    private readGamepadInput(): {
-        moveX: number;
-        moveZ: number;
-        moveY: number;
-        lookYaw: number;
-        lookPitch: number;
-        speedBoost: number;
-    } {
-        const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-        const pad = pads?.find(p => !!p && p.connected) || null;
-        if (!pad) {
-            return { moveX: 0, moveZ: 0, moveY: 0, lookYaw: 0, lookPitch: 0, speedBoost: 0 };
-        }
-
-        // Standard mapping:
-        // axes: [0]=LX, [1]=LY, [2]=RX, [3]=RY
-        const lx = this.applyDeadzone(pad.axes?.[0] ?? 0, this.gamepadDeadzone);
-        const ly = this.applyDeadzone(pad.axes?.[1] ?? 0, this.gamepadDeadzone);
-        const rx = this.applyDeadzone(pad.axes?.[2] ?? 0, this.gamepadDeadzone);
-        const ry = this.applyDeadzone(pad.axes?.[3] ?? 0, this.gamepadDeadzone);
-
-        // Triggers buttons: 6(LT) 7(RT) value 0..1
-        const lt = (pad.buttons?.[6]?.value ?? 0);
-        const rt = (pad.buttons?.[7]?.value ?? 0);
-
-        // Up/down: A(0)=up, B(1)=down；同时允许触发器做升降（RT 上升，LT 下降）
-        const upBtn = pad.buttons?.[0]?.pressed ? 1 : 0;
-        const downBtn = pad.buttons?.[1]?.pressed ? 1 : 0;
-
-        const moveY = (upBtn - downBtn) + (rt - lt);
-        const speedBoost = rt; // 使用 RT 作为“冲刺”强度
-
-        return {
-            moveX: lx,
-            moveZ: -ly,
-            moveY,
-            lookYaw: rx,
-            lookPitch: -ry,
-            speedBoost
-        };
-    }
 
     private update(dt: number): void {
         if (!this.enabled) return;
@@ -364,15 +314,9 @@ class FlyControls {
             const yawAxis = (rightKey ? 1 : 0) - (left ? 1 : 0);
             const pitchAxis = (downKey ? 1 : 0) - (upKey ? 1 : 0);
 
-            yaw += yawAxis * this.keyboardLookDegPerSec * dt;
-            pitch += pitchAxis * this.keyboardLookDegPerSec * dt;
-        }
-
-        // 3) gamepad look
-        const gp = this.readGamepadInput();
-        if (gp.lookYaw !== 0 || gp.lookPitch !== 0) {
-            yaw += gp.lookYaw * this.gamepadLookDegPerSec * dt;
-            pitch += gp.lookPitch * this.gamepadLookDegPerSec * dt;
+            // 直觉方向：左=向左看，上=抬头
+            yaw += -yawAxis * this.keyboardLookDegPerSec * dt;
+            pitch += -pitchAxis * this.keyboardLookDegPerSec * dt;
         }
 
         if (yaw !== 0 || pitch !== 0) {
@@ -408,18 +352,14 @@ class FlyControls {
         const cKey = this.keyDown.has('c') ? 1 : 0;
         const ctrlDownKey = this.keyDown.has('control') ? 1 : 0;
 
-        let speed = this.getMoveSpeed();
-        // gamepad boost
-        if (gp.speedBoost > 0) {
-            speed *= 1 + gp.speedBoost * this.gamepadSpeedBoostMultiplier;
-        }
+        const speed = this.getMoveSpeed();
 
         const kbUp = (eKey || spaceKey) ? 1 : 0;
         const kbDown = (qKey || cKey || ctrlDownKey) ? 1 : 0;
 
-        const moveForward = (w - s) + gp.moveZ;
-        const moveRight = (d - a) + gp.moveX;
-        const moveUpAxis = (kbUp - kbDown) + gp.moveY;
+        const moveForward = (w - s);
+        const moveRight = (d - a);
+        const moveUpAxis = (kbUp - kbDown);
 
         if (moveForward || moveRight || moveUpAxis) {
             move.add(forward.clone().mulScalar(moveForward * speed * dt));

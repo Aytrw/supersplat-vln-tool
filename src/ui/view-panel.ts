@@ -1,4 +1,4 @@
-import { BooleanInput, ColorPicker, Container, Label, SelectInput, SliderInput } from '@playcanvas/pcui';
+import { BooleanInput, Button, ColorPicker, Container, Label, SelectInput, SliderInput } from '@playcanvas/pcui';
 import { Color } from 'playcanvas';
 
 import { Events } from '../events';
@@ -302,6 +302,93 @@ class ViewPanel extends Container {
         showBoundRow.append(showBoundLabel);
         showBoundRow.append(showBoundToggle);
 
+        // === 性能/降采样设置 ===
+
+        // 性能标题分隔行
+        const performanceHeaderRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const performanceHeaderLabel = new Label({
+            text: localize('panel.view-options.performance'),
+            class: 'view-panel-row-label',
+            style: 'font-weight: bold; border-top: 1px solid #444; padding-top: 8px; margin-top: 4px;'
+        });
+
+        performanceHeaderRow.append(performanceHeaderLabel);
+
+        // 降采样比例
+        const downsampleRatioRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const downsampleRatioLabel = new Label({
+            text: localize('panel.view-options.downsample-ratio'),
+            class: 'view-panel-row-label'
+        });
+
+        const downsampleRatioSlider = new SliderInput({
+            class: 'view-panel-row-slider',
+            min: 0.1,
+            max: 1.0,
+            precision: 2,
+            value: 0.5,
+            step: 0.05
+        });
+
+        downsampleRatioRow.append(downsampleRatioLabel);
+        downsampleRatioRow.append(downsampleRatioSlider);
+
+        // 采样方法选择 - 使用简单的切换按钮而非下拉菜单
+        const downsampleMethodRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const downsampleMethodLabel = new Label({
+            text: localize('panel.view-options.downsample-method'),
+            class: 'view-panel-row-label'
+        });
+
+        const downsampleMethodToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'view-panel-row-toggle',
+            value: true  // true = importance, false = random
+        });
+
+        downsampleMethodRow.append(downsampleMethodLabel);
+        downsampleMethodRow.append(downsampleMethodToggle);
+
+        // 应用降采样按钮
+        const applyDownsampleRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const applyDownsampleButton = new Button({
+            text: localize('panel.view-options.apply-downsample'),
+            class: 'view-panel-apply-btn'
+        });
+
+        applyDownsampleRow.append(applyDownsampleButton);
+
+        // 自动降采样开关（导入时）
+        const autoDownsampleRow = new Container({
+            class: 'view-panel-row'
+        });
+
+        const autoDownsampleLabel = new Label({
+            text: localize('panel.view-options.auto-downsample'),
+            class: 'view-panel-row-label'
+        });
+
+        const autoDownsampleToggle = new BooleanInput({
+            type: 'toggle',
+            class: 'view-panel-row-toggle',
+            value: false
+        });
+
+        autoDownsampleRow.append(autoDownsampleLabel);
+        autoDownsampleRow.append(autoDownsampleToggle);
+
         this.append(header);
         this.append(clrRow);
         this.append(tonemappingRow);
@@ -313,6 +400,11 @@ class ViewPanel extends Container {
         this.append(outlineSelectionRow);
         this.append(showGridRow);
         this.append(showBoundRow);
+        this.append(performanceHeaderRow);
+        this.append(downsampleRatioRow);
+        this.append(downsampleMethodRow);
+        this.append(applyDownsampleRow);
+        this.append(autoDownsampleRow);
 
         // handle panel visibility
 
@@ -456,6 +548,39 @@ class ViewPanel extends Container {
         tooltips.register(selectedClrPicker, localize('panel.view-options.selected-color'), 'top');
         tooltips.register(unselectedClrPicker, localize('panel.view-options.unselected-color'), 'top');
         tooltips.register(lockedClrPicker, localize('panel.view-options.locked-color'), 'top');
+        tooltips.register(downsampleRatioSlider, localize('panel.view-options.downsample-ratio.tooltip'), 'left');
+        tooltips.register(downsampleMethodToggle, localize('panel.view-options.downsample-method.tooltip'), 'left');
+        tooltips.register(applyDownsampleButton, localize('panel.view-options.apply-downsample.tooltip'), 'left');
+        tooltips.register(autoDownsampleToggle, localize('panel.view-options.auto-downsample.tooltip'), 'left');
+
+        // === 降采样事件处理 ===
+
+        // 应用降采样按钮
+        applyDownsampleButton.on('click', () => {
+            const ratio = downsampleRatioSlider.value;
+            const method = downsampleMethodToggle.value ? 'importance' : 'random';
+            events.fire('scene.downsample', { ratio, method });
+        });
+
+        // 自动降采样开关
+        autoDownsampleToggle.value = events.invoke('downsample.auto') ?? false;
+        autoDownsampleToggle.on('change', (value: boolean) => {
+            events.fire('downsample.setAuto', value);
+        });
+
+        // 采样方法切换
+        downsampleMethodToggle.on('change', (value: boolean) => {
+            events.fire('downsample.setMethod', value ? 'importance' : 'random');
+        });
+
+        // 监听降采样选项变化
+        events.on('downsample.auto', (auto: boolean) => {
+            autoDownsampleToggle.value = auto;
+        });
+
+        events.on('downsample.method', (method: string) => {
+            downsampleMethodToggle.value = method === 'importance';
+        });
     }
 }
 

@@ -1,12 +1,14 @@
-import { Color, Mat4, path, Texture, Vec3, Vec4 } from 'playcanvas';
+import { Color, GSplatData, GSplatResource, Mat4, path, Texture, Vec3, Vec4 } from 'playcanvas';
 
 import { EditHistory } from './edit-history';
 import { SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, HideSelectionOp, UnhideAllOp, DeleteSelectionOp, ResetOp, MultiOp, AddSplatOp } from './edit-ops';
+import { ElementType } from './element';
 import { Events } from './events';
 import { Scene } from './scene';
 import { BufferWriter } from './serialize/writer';
 import { Splat } from './splat';
 import { serializePly } from './splat-serialize';
+import { downsampleGSplat, formatSplatCount } from './splat-downsample';
 
 const removeExtension = (filename: string) => {
     return filename.substring(0, filename.length - path.getExtension(filename).length);
@@ -52,6 +54,79 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.clear();
         editHistory.clear();
         lastExportCursor = 0;
+    });
+
+    // 对当前场景应用降采样
+    events.on('scene.downsample', (options: { ratio: number; method: 'random' | 'importance' }) => {
+        const splats = scene.getElementsByType(ElementType.splat) as Splat[];
+
+        if (splats.length === 0) {
+            events.fire('showPopup', {
+                type: 'info',
+                message: '当前场景没有加载点云数据'
+            });
+            return;
+        }
+
+        let totalBefore = 0;
+        let totalAfter = 0;
+
+        splats.forEach((splat) => {
+            const originalData = splat.splatData;
+            const numSplats = originalData.numSplats;
+            totalBefore += numSplats;
+
+            // 跳过已经很小的点云
+            if (numSplats < 10000) {
+                totalAfter += numSplats;
+                return;
+            }
+
+            // 应用降采样
+            const downsampledData = downsampleGSplat(originalData, {
+                ratio: options.ratio,
+                method: options.method
+            });
+
+            totalAfter += downsampledData.numSplats;
+
+            // 更新 splat 的数据
+            // 注意：这会创建新的 GSplatData，但需要更新引用
+            if (downsampledData !== originalData) {
+                // 更新 splat 内部的数据引用
+                splat.splatData = downsampledData;
+                splat.numSplats = downsampledData.numSplats;
+
+                // 更新 GSplatResource
+                const asset = splat.asset;
+                if (asset.resource) {
+                    const newResource = new GSplatResource(
+                        scene.app.graphicsDevice,
+                        downsampledData
+                    );
+                    asset.resource = newResource;
+                }
+
+                // 重新创建渲染组件
+                const entity = splat.entity;
+                if (entity.gsplat) {
+                    entity.removeComponent('gsplat');
+                    entity.addComponent('gsplat', { asset: splat.asset });
+                }
+
+                // 标记边界需要重新计算
+                splat.localBoundDirty = true;
+                splat.worldBoundDirty = true;
+            }
+        });
+
+        // 显示结果
+        events.fire('showPopup', {
+            type: 'info',
+            message: `降采样完成: ${formatSplatCount(totalBefore)} → ${formatSplatCount(totalAfter)} (${(totalAfter / totalBefore * 100).toFixed(1)}%)`
+        });
+
+        scene.forceRender = true;
     });
 
     events.function('scene.dirty', () => {

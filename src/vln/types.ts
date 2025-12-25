@@ -176,7 +176,7 @@ export interface RecordingConfig {
 export type PathExportFormat = 'json' | 'csv' | 'txt';
 
 /**
- * 路径导出数据（JSON格式）
+ * 路径导出数据（JSON格式）- 旧格式，保留兼容
  */
 export interface PathExportJSON {
     /** 任务 ID */
@@ -199,6 +199,57 @@ export interface PathExportJSON {
         fov?: number;
         instruction_index?: number;
     }>;
+}
+
+/**
+ * VLN 路径录制导出格式（用户指定格式）
+ * 
+ * 包含完整的路径信息、轨迹矩阵、指令等
+ */
+export interface VLNPathExport {
+    /** 标签：地图名/编号_日期_时间_标注者_id */
+    label: string;
+    /** 路径点坐标数组 [[x1,y1,z1], [x2,y2,z2], ...] */
+    path_points: Array<[number, number, number]>;
+    /** 轨迹变换矩阵数组（c2w格式，每个为 4x4 矩阵展平为 16 元素数组） */
+    trajectory: Array<number[]>;
+    /** 视频路径（预留，录制时为空） */
+    videos: string[];
+    /** 导航指令 */
+    instructions: {
+        /** 完整指令描述 */
+        full_instruction: string;
+        /** 分段指令 */
+        splited_instruction: string[];
+    };
+    /** 人类轨迹（评测用，录制时为空） */
+    human_trajectory: number[][];
+    /** 轨迹评分（评测用，录制时为空对象） */
+    trajectory_score: {
+        success?: boolean;
+        splited_success?: Record<string, boolean>;
+        NE?: number;
+        [key: string]: unknown;
+    };
+    /** 元数据 */
+    metadata: {
+        /** 录制时间 */
+        recorded_at: string;
+        /** 帧率 */
+        frame_rate: number;
+        /** 总帧数 */
+        total_frames: number;
+        /** 总时长（秒） */
+        duration: number;
+        /** 场景 ID */
+        scene_id?: string;
+        /** 任务 ID */
+        task_id?: string;
+        /** 标注者 */
+        annotator?: string;
+        /** 相机 FOV */
+        fov?: number;
+    };
 }
 
 // ============================================================================
@@ -372,4 +423,43 @@ export function createDefaultVisualizationConfig(): PathVisualizationConfig {
         showStartMarker: true,
         showEndMarker: true
     };
+}
+
+/**
+ * 将四元数转换为 4x4 变换矩阵（c2w 格式）
+ * 返回按行展平的 16 元素数组
+ */
+export function poseToTransformMatrix(pose: CameraPose): number[] {
+    const { x: qx, y: qy, z: qz, w: qw } = pose.rotation;
+    const { x: tx, y: ty, z: tz } = pose.position;
+
+    // 四元数转旋转矩阵
+    const xx = qx * qx;
+    const yy = qy * qy;
+    const zz = qz * qz;
+    const xy = qx * qy;
+    const xz = qx * qz;
+    const yz = qy * qz;
+    const wx = qw * qx;
+    const wy = qw * qy;
+    const wz = qw * qz;
+
+    // 旋转矩阵元素
+    const r00 = 1 - 2 * (yy + zz);
+    const r01 = 2 * (xy - wz);
+    const r02 = 2 * (xz + wy);
+    const r10 = 2 * (xy + wz);
+    const r11 = 1 - 2 * (xx + zz);
+    const r12 = 2 * (yz - wx);
+    const r20 = 2 * (xz - wy);
+    const r21 = 2 * (yz + wx);
+    const r22 = 1 - 2 * (xx + yy);
+
+    // 4x4 变换矩阵（行优先）
+    return [
+        r00, r01, r02, tx,
+        r10, r11, r12, ty,
+        r20, r21, r22, tz,
+        0,   0,   0,   1
+    ];
 }

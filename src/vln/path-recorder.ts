@@ -4,6 +4,8 @@
  * 负责按指定帧率捕获相机位姿，管理录制状态
  */
 
+import { Quat } from 'playcanvas';
+
 import { Events } from '../events';
 import { Scene } from '../scene';
 import {
@@ -69,6 +71,31 @@ class PathRecorder {
      * 注册事件处理器
      */
     private registerEvents(): void {
+        // 监听录制开始事件
+        this.events.on(VLNEventNames.RECORDING_STARTED, () => {
+            this.start();
+        });
+
+        // 监听录制暂停事件
+        this.events.on(VLNEventNames.RECORDING_PAUSED, () => {
+            this.pause();
+        });
+
+        // 监听录制恢复事件
+        this.events.on(VLNEventNames.RECORDING_RESUMED, () => {
+            this.resume();
+        });
+
+        // 监听录制停止事件
+        this.events.on(VLNEventNames.RECORDING_STOPPED, () => {
+            this.stop();
+        });
+
+        // 监听指令索引变化
+        this.events.on('vln.instruction.indexChanged', (index: number) => {
+            this.setCurrentInstructionIndex(index);
+        });
+
         // 注册函数接口
         this.events.function('vln.recorder.status', () => this.status);
         this.events.function('vln.recorder.frames', () => this.frames);
@@ -89,8 +116,7 @@ class PathRecorder {
             return;
         }
 
-        // TODO: 实现录制开始逻辑
-        console.log('VLN: PathRecorder.start - not fully implemented');
+        console.log('VLN: PathRecorder.start - recording started');
 
         this.status = 'recording';
         this.frames = [];
@@ -115,8 +141,7 @@ class PathRecorder {
             return;
         }
 
-        // TODO: 实现录制暂停逻辑
-        console.log('VLN: PathRecorder.pause - not fully implemented');
+        console.log('VLN: PathRecorder.pause - recording paused');
 
         this.status = 'paused';
         
@@ -134,8 +159,7 @@ class PathRecorder {
             return;
         }
 
-        // TODO: 实现录制恢复逻辑
-        console.log('VLN: PathRecorder.resume - not fully implemented');
+        console.log('VLN: PathRecorder.resume - recording resumed');
 
         this.status = 'recording';
         
@@ -149,8 +173,7 @@ class PathRecorder {
      * 停止录制
      */
     stop(): RecordedFrame[] {
-        // TODO: 实现录制停止逻辑
-        console.log('VLN: PathRecorder.stop - not fully implemented');
+        console.log('VLN: PathRecorder.stop - recording stopped, frames:', this.frames.length);
 
         this.status = 'stopped';
         
@@ -180,9 +203,6 @@ class PathRecorder {
      * 捕获当前帧
      */
     private captureFrame(): void {
-        // TODO: 实现帧捕获逻辑
-        // 这里需要从 scene.camera 获取当前相机位姿
-        
         const pose = this.getCurrentCameraPose();
         const timestamp = Date.now() - this.startTime;
 
@@ -207,17 +227,33 @@ class PathRecorder {
 
     /**
      * 获取当前相机位姿
+     * 从 scene.camera 读取真实的相机位置、旋转和 FOV
      */
     private getCurrentCameraPose(): CameraPose {
-        // TODO: 实现从场景相机获取位姿
-        console.log('VLN: getCurrentCameraPose - not fully implemented');
+        const camera = this.scene.camera;
+        if (!camera || !camera.entity) {
+            console.warn('VLN: PathRecorder - camera not available');
+            return {
+                position: { x: 0, y: 0, z: 0 },
+                rotation: { x: 0, y: 0, z: 0, w: 1 },
+                fov: 60,
+                timestamp: Date.now()
+            };
+        }
 
-        // 占位实现，返回默认值
-        // 实际应该从 this.scene.camera 获取
+        // 获取相机世界位置
+        const pos = camera.entity.getPosition();
+
+        // 获取相机世界旋转（四元数）
+        const rot = camera.entity.getRotation();
+
+        // 获取 FOV
+        const fov = camera.fov || 60;
+
         return {
-            position: { x: 0, y: 0, z: 0 },
-            rotation: { x: 0, y: 0, z: 0, w: 1 },
-            fov: 60,
+            position: { x: pos.x, y: pos.y, z: pos.z },
+            rotation: { x: rot.x, y: rot.y, z: rot.z, w: rot.w },
+            fov: fov,
             timestamp: Date.now()
         };
     }

@@ -12,10 +12,13 @@ import {
     CameraPose,
     RecordingSession,
     RecordingConfig,
+    RecordedFrame,
     PathData,
     PathExportFormat,
+    VLNPathExport,
     VLNEventNames,
     poseFromSimple,
+    poseToTransformMatrix,
     createDefaultPose,
     createDefaultRecordingConfig
 } from './types';
@@ -194,13 +197,12 @@ class VLNManager {
      * 开始录制
      */
     startRecording(): void {
-        // TODO: 实现录制开始逻辑
-        console.log('VLN: startRecording - not fully implemented');
-
         if (this.isRecording()) {
             console.warn('VLN: Already recording');
             return;
         }
+
+        console.log('VLN: startRecording');
 
         this.currentSession = {
             id: `rec_${Date.now()}`,
@@ -218,12 +220,11 @@ class VLNManager {
      * 暂停录制
      */
     pauseRecording(): void {
-        // TODO: 实现录制暂停逻辑
-        console.log('VLN: pauseRecording - not fully implemented');
-
         if (!this.currentSession || this.currentSession.status !== 'recording') {
             return;
         }
+
+        console.log('VLN: pauseRecording');
 
         this.currentSession.status = 'paused';
         this.events.fire(VLNEventNames.RECORDING_PAUSED, this.currentSession);
@@ -233,35 +234,121 @@ class VLNManager {
      * 恢复录制
      */
     resumeRecording(): void {
-        // TODO: 实现录制恢复逻辑
-        console.log('VLN: resumeRecording - not fully implemented');
-
         if (!this.currentSession || this.currentSession.status !== 'paused') {
             return;
         }
+
+        console.log('VLN: resumeRecording');
 
         this.currentSession.status = 'recording';
         this.events.fire(VLNEventNames.RECORDING_RESUMED, this.currentSession);
     }
 
     /**
-     * 停止录制
+     * 停止录制并导出
      */
     stopRecording(): RecordingSession | null {
-        // TODO: 实现录制停止逻辑
-        console.log('VLN: stopRecording - not fully implemented');
-
         if (!this.currentSession) {
             return null;
         }
 
+        console.log('VLN: stopRecording');
+
         this.currentSession.status = 'stopped';
         this.currentSession.endTime = Date.now();
+
+        // 从 PathRecorder 获取录制的帧数据
+        const frames = this.events.invoke('vln.recorder.frames') as RecordedFrame[] || [];
+        this.currentSession.frames = frames;
 
         const session = this.currentSession;
         this.events.fire(VLNEventNames.RECORDING_STOPPED, session);
 
+        // 自动保存
+        if (frames.length > 0) {
+            this.autoSaveRecording();
+        } else {
+            console.warn('VLN: No frames recorded, skipping save');
+        }
+
         return session;
+    }
+
+    /**
+     * 自动保存录制（停止时调用）
+     */
+    private async autoSaveRecording(): Promise<void> {
+        if (!this.currentSession || this.currentSession.frames.length === 0) {
+            return;
+        }
+
+        const frames = this.currentSession.frames;
+
+        // 构建导出数据
+        const exportData: VLNPathExport = {
+            label: this.generateLabel(),
+            path_points: frames.map(f => [
+                f.pose.position.x,
+                f.pose.position.y,
+                f.pose.position.z
+            ] as [number, number, number]),
+            trajectory: frames.map(f => poseToTransformMatrix(f.pose)),
+            videos: [],
+            instructions: {
+                full_instruction: this.currentTask?.instructions?.join(' ') || '',
+                splited_instruction: this.currentTask?.instructions || []
+            },
+            human_trajectory: [],
+            trajectory_score: {},
+            metadata: {
+                recorded_at: new Date().toISOString(),
+                frame_rate: this.currentSession.frameRate,
+                total_frames: frames.length,
+                duration: this.currentSession.endTime 
+                    ? (this.currentSession.endTime - this.currentSession.startTime) / 1000 
+                    : 0,
+                scene_id: this.currentTask?.sceneId,
+                task_id: this.currentTask?.id,
+                fov: frames[0]?.pose.fov
+            }
+        };
+
+        const jsonString = JSON.stringify(exportData, null, 2);
+
+        // 使用 FileSaver 保存
+        const fileSaver = this.events.invoke('vln.modules')?.fileSaver;
+        
+        if (fileSaver) {
+            const result = await fileSaver.saveFile(jsonString);
+            
+            if (result.success && result.path) {
+                // 显示成功提示
+                this.showSaveSuccessNotification(result.path, frames.length);
+            } else {
+                console.error('VLN: Failed to save recording');
+            }
+        } else {
+            console.error('VLN: FileSaver not available');
+        }
+    }
+
+    /**
+     * 显示保存成功通知
+     */
+    private showSaveSuccessNotification(path: string, frameCount: number): void {
+        console.log(`VLN: Recording saved to ${path} (${frameCount} frames)`);
+        
+        // 尝试使用宿主的通知系统
+        try {
+            this.events.invoke('showPopup', {
+                type: 'info',
+                header: '录制已保存',
+                message: `路径已保存到：\n${path}\n\n共 ${frameCount} 帧`
+            });
+        } catch {
+            // 回退到浏览器原生通知
+            alert(`✅ 录制已保存\n\n路径：${path}\n帧数：${frameCount}`);
+        }
     }
 
     /**
@@ -327,8 +414,7 @@ class VLNManager {
      * 导出路径数据
      */
     exportPath(format: PathExportFormat = 'json'): void {
-        // TODO: 实现路径导出逻辑
-        console.log('VLN: exportPath - not fully implemented', format);
+        console.log('VLN: exportPath', format);
 
         if (!this.currentSession || this.currentSession.frames.length === 0) {
             console.warn('VLN: No recording data to export');
@@ -349,19 +435,197 @@ class VLNManager {
         }
     }
 
+    /**
+     * 生成导出标签
+     */
+    private generateLabel(): string {
+        const now = new Date();
+        const date = now.toISOString().split('T')[0].replace(/-/g, '');
+        const time = now.toTimeString().split(' ')[0].replace(/:/g, '');
+        const sceneId = this.currentTask?.sceneId || 'unknown';
+        const taskId = this.currentTask?.id || 'notask';
+        const id = this.currentSession?.id || `rec_${Date.now()}`;
+        
+        return `path_${sceneId}_${date}_${time}_annotator_${id}`;
+    }
+
+    /**
+     * 导出为用户指定的 JSON 格式
+     */
     private exportAsJSON(): void {
-        // TODO: 实现 JSON 导出
-        console.log('VLN: exportAsJSON - not implemented');
+        if (!this.currentSession) {
+            console.warn('VLN: No session to export');
+            return;
+        }
+
+        const frames = this.currentSession.frames;
+        if (frames.length === 0) {
+            console.warn('VLN: No frames to export');
+            return;
+        }
+
+        // 构建用户指定格式的导出数据
+        const exportData: VLNPathExport = {
+            label: this.generateLabel(),
+            
+            // 路径点坐标
+            path_points: frames.map(f => [
+                f.pose.position.x,
+                f.pose.position.y,
+                f.pose.position.z
+            ] as [number, number, number]),
+            
+            // 轨迹变换矩阵（c2w 格式）
+            trajectory: frames.map(f => poseToTransformMatrix(f.pose)),
+            
+            // 视频路径（录制时为空）
+            videos: [],
+            
+            // 导航指令
+            instructions: {
+                full_instruction: this.currentTask?.instructions?.join(' ') || '',
+                splited_instruction: this.currentTask?.instructions || []
+            },
+            
+            // 人类轨迹（评测用，录制时为空）
+            human_trajectory: [],
+            
+            // 轨迹评分（评测用，录制时为空对象）
+            trajectory_score: {},
+            
+            // 元数据
+            metadata: {
+                recorded_at: new Date().toISOString(),
+                frame_rate: this.currentSession.frameRate,
+                total_frames: frames.length,
+                duration: this.currentSession.endTime 
+                    ? (this.currentSession.endTime - this.currentSession.startTime) / 1000 
+                    : 0,
+                scene_id: this.currentTask?.sceneId,
+                task_id: this.currentTask?.id,
+                fov: frames[0]?.pose.fov
+            }
+        };
+
+        // 转换为 JSON 字符串
+        const jsonString = JSON.stringify(exportData, null, 2);
+
+        // 使用 FileSaver 保存（会自动处理文件名和目录）
+        this.saveToFile(jsonString, `${exportData.label}.json`);
+
+        console.log('VLN: Exported path data:', {
+            label: exportData.label,
+            frames: frames.length,
+            duration: exportData.metadata.duration
+        });
     }
 
+    /**
+     * 导出为 CSV 格式
+     */
     private exportAsCSV(): void {
-        // TODO: 实现 CSV 导出
-        console.log('VLN: exportAsCSV - not implemented');
+        if (!this.currentSession || this.currentSession.frames.length === 0) {
+            console.warn('VLN: No data to export as CSV');
+            return;
+        }
+
+        const frames = this.currentSession.frames;
+        const headers = [
+            'frame', 'timestamp', 
+            'pos_x', 'pos_y', 'pos_z', 
+            'rot_x', 'rot_y', 'rot_z', 'rot_w', 
+            'fov', 'instruction_index'
+        ];
+
+        const rows = frames.map(f => [
+            f.index,
+            f.timestamp,
+            f.pose.position.x,
+            f.pose.position.y,
+            f.pose.position.z,
+            f.pose.rotation.x,
+            f.pose.rotation.y,
+            f.pose.rotation.z,
+            f.pose.rotation.w,
+            f.pose.fov || '',
+            f.instructionIndex ?? ''
+        ]);
+
+        const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const label = this.generateLabel();
+        
+        this.saveToFile(csv, `${label}.csv`, 'text/csv');
+
+        console.log('VLN: Exported CSV:', frames.length, 'frames');
     }
 
+    /**
+     * 导出为 TXT 格式（简单的位置列表）
+     */
     private exportAsTXT(): void {
-        // TODO: 实现 TXT 导出
-        console.log('VLN: exportAsTXT - not implemented');
+        if (!this.currentSession || this.currentSession.frames.length === 0) {
+            console.warn('VLN: No data to export as TXT');
+            return;
+        }
+
+        const frames = this.currentSession.frames;
+        const lines = frames.map(f => 
+            `${f.index}\t${f.pose.position.x.toFixed(6)}\t${f.pose.position.y.toFixed(6)}\t${f.pose.position.z.toFixed(6)}`
+        );
+
+        const txt = `# VLN Path Recording\n# frame\tx\ty\tz\n${lines.join('\n')}`;
+        const label = this.generateLabel();
+        
+        this.saveToFile(txt, `${label}.txt`, 'text/plain');
+
+        console.log('VLN: Exported TXT:', frames.length, 'frames');
+    }
+
+    /**
+     * 使用 FileSaver 保存文件
+     */
+    private async saveToFile(content: string, filename: string, mimeType: string = 'application/json'): Promise<void> {
+        // 尝试通过事件调用 FileSaver
+        const fileSaver = this.events.invoke('vln.modules')?.fileSaver;
+        
+        if (fileSaver) {
+            const result = await fileSaver.saveFile(content, filename, mimeType);
+            if (result.success) {
+                console.log('VLN: File saved via FileSaver:', result.path);
+                
+                // 显示保存成功提示
+                if (result.path) {
+                    try {
+                        this.events.invoke('showPopup', {
+                            type: 'info',
+                            header: '导出成功',
+                            message: `文件已保存到：\n${result.path}`
+                        });
+                    } catch {
+                        alert(`✅ 文件已保存到：\n${result.path}`);
+                    }
+                }
+                return;
+            }
+        }
+
+        // 如果 FileSaver 不可用或保存失败，不执行任何操作（已在 FileSaver 中处理回退）
+        console.warn('VLN: File not saved, FileSaver unavailable or failed');
+    }
+
+    /**
+     * 下载文件（回退方案）
+     */
+    private downloadFile(content: string, filename: string, mimeType: string): void {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     }
 }
 

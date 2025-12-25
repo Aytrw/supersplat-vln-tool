@@ -20,7 +20,6 @@ class QuickActions extends Container {
     
     // UI elements
     private importBtn: Container;
-    private exportBtn: Container;
     private resetBtn: Container;
 
     constructor(events: Events, tooltips: Tooltips, args = {}) {
@@ -47,12 +46,6 @@ class QuickActions extends Container {
         });
         this.append(this.importBtn);
 
-        // Export button
-        this.exportBtn = this.createActionButton('导出路径', 'default', () => {
-            this.events.fire(VLNEventNames.PATH_EXPORT, 'json');
-        });
-        this.append(this.exportBtn);
-
         // Reset/Clear button
         this.resetBtn = this.createActionButton('重置', 'danger', () => {
             this.events.fire(VLNEventNames.TASK_CLEAR);
@@ -61,7 +54,6 @@ class QuickActions extends Container {
 
         // Register tooltips
         this.tooltips.register(this.importBtn, '导入 VLN 任务文件 (JSON)', 'top');
-        this.tooltips.register(this.exportBtn, '导出录制的路径数据', 'top');
         this.tooltips.register(this.resetBtn, '清空当前任务和录制数据', 'top');
     }
 
@@ -106,14 +98,6 @@ class QuickActions extends Container {
     setImportEnabled(enabled: boolean): void {
         this.importBtn.dom.style.opacity = enabled ? '1' : '0.4';
         this.importBtn.dom.style.pointerEvents = enabled ? 'auto' : 'none';
-    }
-
-    /**
-     * Enable/disable export button
-     */
-    setExportEnabled(enabled: boolean): void {
-        this.exportBtn.dom.style.opacity = enabled ? '1' : '0.4';
-        this.exportBtn.dom.style.pointerEvents = enabled ? 'auto' : 'none';
     }
 }
 

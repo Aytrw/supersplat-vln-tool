@@ -673,6 +673,45 @@
     background-color: transparent;
 }
 
+// ============================================================================
+// Fly Hint (keyboard/gamepad cheat-sheet)
+// ============================================================================
+
+#vln-fly-hint.vln-hud-panel {
+    position: fixed;
+    /* Position (left/bottom/width) is computed in JS to align with the instruction panel. */
+    max-width: 320px;
+    z-index: 1001;
+
+    .vln-fly-hint-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+    }
+
+    .vln-fly-hint-title {
+        font-weight: 600;
+        opacity: 0.95;
+    }
+
+    .vln-fly-hint-content {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .vln-fly-hint-text {
+        white-space: pre-line;
+        line-height: 1.35;
+        opacity: 0.9;
+    }
+
+    &.is-wake {
+        outline: 1px solid rgba(255, 255, 255, 0.25);
+    }
+}
+
 .vln-fov-label {
     font-size: 9px;
     color: $text-darkest;

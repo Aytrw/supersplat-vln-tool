@@ -21,6 +21,7 @@ import { RecorderBar } from './hud/recorder-bar';
 import { AuxiliaryView } from './hud/auxiliary-view';
 import { TaskBadge } from './hud/task-badge';
 import { QuickActions } from './hud/quick-actions';
+import { FlyHint } from './hud/fly-hint';
 
 /**
  * VLN HUD Overlay main container
@@ -35,9 +36,11 @@ class VLNHudOverlay extends Container {
     private auxiliaryView: AuxiliaryView;
     private taskBadge: TaskBadge;
     private quickActions: QuickActions;
+    private flyHint: FlyHint;
 
     private bottomBarDom?: HTMLElement;
     private instructionPanelDom?: HTMLElement;
+    private flyHintDom?: HTMLElement;
     
     // Visibility state
     private isVisible: boolean = true;
@@ -98,6 +101,11 @@ class VLNHudOverlay extends Container {
         // Module C: Auxiliary View Placeholder (Top-Right)
         this.auxiliaryView = new AuxiliaryView(this.events, this.tooltips);
         this.append(this.auxiliaryView);
+
+        // Fly hint (Bottom-Right)
+        this.flyHint = new FlyHint(this.events);
+        this.append(this.flyHint);
+        this.flyHintDom = this.flyHint.dom;
     }
 
     private setupBottomBarPositioning(): void {
@@ -195,6 +203,34 @@ class VLNHudOverlay extends Container {
         const topMarginPx = 24;
         const maxHeightPx = Math.max(240, Math.floor(window.innerHeight - anchorBottomPx - topMarginPx));
         panelDom.style.maxHeight = `${maxHeightPx}px`;
+
+        // Keep fly hint aligned above instruction panel
+        this.updateFlyHintLayout();
+    }
+
+    private updateFlyHintLayout(): void {
+        const panelDom = this.instructionPanelDom;
+        const hintDom = this.flyHintDom;
+        if (!panelDom || !hintDom) return;
+
+        const rect = panelDom.getBoundingClientRect();
+        const gapPx = 8;
+
+        // Position directly above the instruction panel, aligned to its left edge.
+        const left = Math.max(0, Math.round(rect.left));
+        const bottom = Math.max(0, Math.round(window.innerHeight - rect.top + gapPx));
+        const width = Math.max(180, Math.round(rect.width));
+
+        hintDom.style.position = 'fixed';
+        hintDom.style.left = `${left}px`;
+        hintDom.style.bottom = `${bottom}px`;
+        hintDom.style.width = `${width}px`;
+
+        // Make sure it doesn't overflow the viewport horizontally.
+        const maxLeft = Math.max(0, window.innerWidth - width);
+        if (left > maxLeft) {
+            hintDom.style.left = `${maxLeft}px`;
+        }
     }
 
 

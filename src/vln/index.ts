@@ -13,6 +13,7 @@ export { PathRecorder } from './path-recorder';
 export { CameraController } from './camera-controller';
 export { PathVisualizer } from './path-visualizer';
 export { DataLoader } from './data-loader';
+export { FileSaver } from './file-saver';
 
 // 事件注册
 export { registerVLNEvents, destroyVLNModules, getVLNModules } from './vln-events';
