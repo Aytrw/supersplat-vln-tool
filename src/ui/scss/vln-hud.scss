@@ -612,6 +612,115 @@
 }
 
 // ============================================================================
+// Robot Video Connection UI
+// ============================================================================
+
+// Connect button on placeholder
+.vln-video-connect-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, rgba($clr-hilight, 0.15) 0%, rgba($clr-hilight, 0.05) 100%);
+    border: 1px solid rgba($clr-hilight, 0.4);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    svg {
+        width: 16px;
+        height: 16px;
+        stroke: $clr-hilight;
+        fill: none;
+    }
+    
+    span {
+        font-size: 11px;
+        font-weight: 500;
+        color: $clr-hilight;
+        white-space: nowrap;
+    }
+    
+    &:hover {
+        background: linear-gradient(135deg, rgba($clr-hilight, 0.25) 0%, rgba($clr-hilight, 0.1) 100%);
+        border-color: rgba($clr-hilight, 0.6);
+        transform: scale(1.02);
+        
+        svg {
+            stroke: lighten($clr-hilight, 10%);
+        }
+        
+        span {
+            color: lighten($clr-hilight, 10%);
+        }
+    }
+    
+    &:active {
+        transform: scale(0.98);
+    }
+}
+
+// Connection status indicator
+.vln-video-status {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: rgba($bcg-darkest, 0.8);
+    border-radius: 4px;
+    border: 1px solid rgba($bcg-lighter, 0.2);
+    z-index: 50;
+    pointer-events: none;
+    
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        
+        &.disconnected {
+            background: $text-darkest;
+            box-shadow: 0 0 4px rgba($text-darkest, 0.5);
+        }
+        
+        &.connecting {
+            background: #f59e0b;
+            box-shadow: 0 0 6px rgba(#f59e0b, 0.6);
+            animation: pulse 1s infinite;
+        }
+        
+        &.connected {
+            background: #22c55e;
+            box-shadow: 0 0 6px rgba(#22c55e, 0.6);
+        }
+        
+        &.error {
+            background: #ef4444;
+            box-shadow: 0 0 6px rgba(#ef4444, 0.6);
+        }
+    }
+    
+    .status-text {
+        font-size: 10px;
+        color: $text-secondary;
+        white-space: nowrap;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+// ============================================================================
 // Task Info Badge (integrated into unified bottom bar)
 // ============================================================================
 #vln-task-badge {
