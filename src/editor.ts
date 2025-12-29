@@ -800,12 +800,35 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const position = camera.entity.getPosition();
         const focalPoint = camera.focalPoint;
         const rotation = camera.entity.getRotation();
-        const euler = camera.entity.getLocalEulerAngles();
+
+        // Compute roll as a signed rotation around the camera forward axis.
+        // Euler extraction is order-dependent and can couple roll/pitch.
+        const WORLD_UP = new Vec3(0, 1, 0);
+        const forward = camera.entity.forward.clone().normalize();
+        const up = camera.entity.up.clone().normalize();
+
+        // Reference up = world up projected onto plane orthogonal to forward.
+        const refUp = WORLD_UP.clone().sub(forward.clone().mulScalar(WORLD_UP.dot(forward)));
+        const refUpLen = refUp.length();
+        if (refUpLen > 1e-6) refUp.mulScalar(1 / refUpLen);
+
+        // Current up projected onto plane orthogonal to forward.
+        const upProj = up.clone().sub(forward.clone().mulScalar(up.dot(forward)));
+        const upProjLen = upProj.length();
+        if (upProjLen > 1e-6) upProj.mulScalar(1 / upProjLen);
+
+        let rollDeg = 0;
+        if (refUpLen > 1e-6 && upProjLen > 1e-6) {
+            const cross = new Vec3().cross(refUp, upProj);
+            const sin = cross.dot(forward);
+            const cos = refUp.dot(upProj);
+            rollDeg = Math.atan2(sin, cos) * (180 / Math.PI);
+        }
         return {
             position: { x: position.x, y: position.y, z: position.z },
             target: { x: focalPoint.x, y: focalPoint.y, z: focalPoint.z },
             rotation: { x: rotation.x, y: rotation.y, z: rotation.z, w: rotation.w },
-            roll: euler.z
+            roll: rollDeg
         };
     });
 

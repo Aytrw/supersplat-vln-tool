@@ -492,7 +492,13 @@ class Camera extends Element {
         cameraPosition.add(this.focalPointTween.value);
 
         this.entity.setLocalPosition(cameraPosition);
-        this.entity.setLocalEulerAngles(azimElev.elev, azimElev.azim, roll.roll);
+
+        // IMPORTANT: Apply roll as a rotation around the *current* forward axis.
+        // Using Euler Z here can couple roll/pitch depending on Euler order.
+        this.entity.setLocalEulerAngles(azimElev.elev, azimElev.azim, 0);
+        quat.setFromAxisAngle(this.entity.forward, roll.roll);
+        quat.mul2(quat, this.entity.getLocalRotation());
+        this.entity.setLocalRotation(quat);
 
         this.fitClippingPlanes(this.entity.getLocalPosition(), this.entity.forward);
 

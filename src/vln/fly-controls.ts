@@ -65,14 +65,15 @@ class FlyControls {
     private lookDx = 0;
     private lookDy = 0;
 
-    // 使用 azim/elev/roll + position 作为内部状态（与 camera.ts 一致）
+    // 内部状态：position/target/roll（与 camera.setPose 对齐），以及由其推导的 azim/elev
+    private position = new Vec3(0, 0, 0);
+    private target = new Vec3(0, 0, -1);
+    private targetDistance = 1;
+
+    // 由 position/target 推导出的角度（用于键盘/鼠标 look 增量）
     private azim = 0;      // 水平旋转角度
     private elev = 0;      // 仰角
     private rollDeg = 0;   // 翻滚角
-    private position = new Vec3(0, 0, 0);
-
-    // 当前相机 position->target 的距离；开启/空闲时从真实相机同步
-    private targetDistance = 1;
 
     // 灵敏度设置
     private readonly mouseLookSensitivity = 0.3;  // 与 orbitSensitivity 一致
@@ -151,6 +152,7 @@ class FlyControls {
         const roll = camera.rollTween.value.roll;
 
         this.position.copy(position);
+        this.target.copy(target);
         this.rollDeg = isFinite(roll) ? roll : 0;
 
         const ae = poseToAzimElev(position, target);
@@ -163,22 +165,10 @@ class FlyControls {
      * 将内部状态应用到场景相机
      */
     private applyToCamera(): void {
-        // calcForwardVec(azim,elev) 在 SuperSplat 中表示 target -> camera 的方向向量
-        // 相机真正“看向”的 forward 应该取反：camera -> target
-        const lookForward = calcForwardVec(this.azim, this.elev).mulScalar(-1);
-        if (lookForward.length() < EPS) {
-            lookForward.set(0, 0, -1);
-        } else {
-            lookForward.normalize();
-        }
-
-        const distance = isFinite(this.targetDistance) && this.targetDistance > EPS ? this.targetDistance : 1;
-        const target = this.position.clone().add(lookForward.mulScalar(distance));
-
         // 使用 camera.setPose 设置位姿，dampingFactor = 0 立即生效
         this.events.fire('camera.setPose', {
             position: this.position.clone(),
-            target: target,
+            target: this.target.clone(),
             roll: this.rollDeg
         }, 0);
     }
@@ -401,6 +391,7 @@ class FlyControls {
         }
 
         let changed = false;
+        let lookChanged = false;
 
         // ====== 视角旋转（azim/elev）======
 
@@ -413,6 +404,7 @@ class FlyControls {
             this.lookDx = 0;
             this.lookDy = 0;
             changed = true;
+            lookChanged = true;
         }
 
         // 2) 键盘输入 (方向键 / IJKL)
@@ -428,6 +420,7 @@ class FlyControls {
             this.azim -= yawAxis * this.keyboardLookDegPerSec * dt;
             this.elev -= pitchAxis * this.keyboardLookDegPerSec * dt;
             changed = true;
+            lookChanged = true;
         }
 
         // 规范化 azim 到 [0, 360)，限制 elev 到 [-90, 90]
@@ -445,6 +438,18 @@ class FlyControls {
             // 规范化到 [-180, 180)
             this.rollDeg = mod(this.rollDeg + 180, 360) - 180;
             changed = true;
+        }
+
+        // 如果 look 发生变化：保持 position 不动，重建 target（roll 不影响 target）
+        if (lookChanged) {
+            const cameraToTarget = calcForwardVec(this.azim, this.elev).mulScalar(-1);
+            if (cameraToTarget.length() < EPS) {
+                cameraToTarget.set(0, 0, -1);
+            } else {
+                cameraToTarget.normalize();
+            }
+            const distance = isFinite(this.targetDistance) && this.targetDistance > EPS ? this.targetDistance : 1;
+            this.target.copy(this.position).add(cameraToTarget.mulScalar(distance));
         }
 
         // ====== 移动 ======
@@ -491,6 +496,7 @@ class FlyControls {
             move.add(up.clone().mulScalar(moveUpAxis * speed * dt));
 
             this.position.add(move);
+            this.target.add(move);
             changed = true;
         }
 
