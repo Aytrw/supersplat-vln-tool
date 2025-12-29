@@ -141,36 +141,22 @@ class FlyControls {
      * 从场景相机同步状态到内部变量
      */
     private syncFromCamera(): void {
-        const pose6 = this.events.invoke('camera.getPose6dof') as any;
-        if (pose6?.position && pose6?.target) {
-            const position = new Vec3(pose6.position.x, pose6.position.y, pose6.position.z);
-            const target = new Vec3(pose6.target.x, pose6.target.y, pose6.target.z);
+        const camera = this.scene.camera;
+        if (!camera) return;
 
-            this.position.copy(position);
-            if (typeof pose6.roll === 'number' && isFinite(pose6.roll)) {
-                this.rollDeg = pose6.roll;
-            }
+        // 关键：使用 tween 的“当前值”，而不是 target（target 可能在阻尼过渡中尚未达到）
+        const position = camera.entity.getPosition().clone();
+        const fpv = camera.focalPointTween.value;
+        const target = new Vec3(fpv.x, fpv.y, fpv.z);
+        const roll = camera.rollTween.value.roll;
 
-            const ae = poseToAzimElev(position, target);
-            this.azim = ae.azim;
-            this.elev = ae.elev;
-            this.targetDistance = ae.distance;
-            return;
-        }
+        this.position.copy(position);
+        this.rollDeg = isFinite(roll) ? roll : 0;
 
-        const pose = this.events.invoke('camera.getPose') as any;
-        if (pose?.position && pose?.target) {
-            const position = new Vec3(pose.position.x, pose.position.y, pose.position.z);
-            const target = new Vec3(pose.target.x, pose.target.y, pose.target.z);
-
-            this.position.copy(position);
-
-            const ae = poseToAzimElev(position, target);
-            this.azim = ae.azim;
-            this.elev = ae.elev;
-            this.targetDistance = ae.distance;
-            return;
-        }
+        const ae = poseToAzimElev(position, target);
+        this.azim = ae.azim;
+        this.elev = ae.elev;
+        this.targetDistance = ae.distance;
     }
 
     /**
@@ -286,6 +272,16 @@ class FlyControls {
 
         e.preventDefault();
         e.stopPropagation();
+
+        // IJKL / 方向键 / QE 等“纯视角键”在首次按下时先同步一次，避免从旧状态累积导致跳轴
+        if (down && !e.repeat) {
+            const isLookKey = keyLower === 'arrowup' || keyLower === 'arrowdown' || keyLower === 'arrowleft' || keyLower === 'arrowright' ||
+                keyLower === 'i' || keyLower === 'j' || keyLower === 'k' || keyLower === 'l';
+            const isRollKey = keyLower === 'q' || keyLower === 'e' || keyLower === 'z' || keyLower === 'x';
+            if (isLookKey || isRollKey) {
+                this.syncFromCamera();
+            }
+        }
 
         if (down && !e.repeat) {
             this.events.fire('vln.camera.flyInput', { key: keyLower });
