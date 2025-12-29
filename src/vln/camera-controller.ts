@@ -43,6 +43,11 @@ class CameraController {
     private isAnimating: boolean = false;
     private animationDuration: number = 500; // 毫秒
 
+    // GO2 auto-calibration (horizontal FOV)
+    private readonly go2HorizontalFovDeg: number = 120;
+    private go2AutoCalibrated: boolean = false;
+    private userAdjustedFov: boolean = false;
+
     constructor(events: Events, scene: Scene) {
         this.events = events;
         this.scene = scene;
@@ -54,6 +59,7 @@ class CameraController {
      */
     initialize(): void {
         this.registerEvents();
+        this.autoCalibrateGo2FovOnce();
         console.log('VLN: CameraController initialized');
     }
 
@@ -75,11 +81,13 @@ class CameraController {
 
         // 监听 FOV 设置事件（来自其他模块的指令）
         this.events.on(VLNEventNames.CAMERA_SET_FOV, (fov: number) => {
+            this.userAdjustedFov = true;
             this.setFov(fov);
         });
 
         // 监听 FOV 变化事件（来自 UI 滑块拖动）
         this.events.on(VLNEventNames.FOV_CHANGE, (fov: number) => {
+            this.userAdjustedFov = true;
             this.setFov(fov);
         });
 
@@ -96,6 +104,61 @@ class CameraController {
         this.events.function('vln.camera.settings', () => this.settings);
         this.events.function('vln.camera.motionMode', () => this.motionMode);
         this.events.function('vln.camera.fov', () => this.getFov());
+    }
+
+    // ========================================================================
+    // GO2 HFOV Auto Calibration
+    // ========================================================================
+
+    private horizontalToVerticalFovDeg(horizontalFovDeg: number, aspect: number): number {
+        const h = horizontalFovDeg * math.DEG_TO_RAD;
+        const v = 2 * Math.atan(Math.tan(h * 0.5) / Math.max(1e-6, aspect));
+        return v * math.RAD_TO_DEG;
+    }
+
+    private autoCalibrateGo2FovOnce(): void {
+        // Apply only once on page entry, and never override user adjustments.
+        if (this.go2AutoCalibrated) return;
+
+        let attempts = 0;
+        const maxAttempts = 120; // ~2s @ 60fps
+
+        const tick = () => {
+            if (this.go2AutoCalibrated) return;
+            if (this.userAdjustedFov) return;
+
+            // Wait until render target size is known (aspect stable)
+            const aspectReady = this.events.invoke('camera.aspectReady');
+            if (typeof aspectReady === 'boolean' && !aspectReady) {
+                attempts++;
+                if (attempts < maxAttempts) requestAnimationFrame(tick);
+                return;
+            }
+
+            const aspect = this.getViewportAspect();
+            // GO2 spec: 120° is horizontal FOV. Our setFov expects vertical FOV.
+            const vertical = this.horizontalToVerticalFovDeg(this.go2HorizontalFovDeg, aspect);
+            this.setFov(vertical);
+            this.go2AutoCalibrated = true;
+
+            // Notify user (non-blocking)
+            this.events.fire('vln.camera.go2FovCalibrated', {
+                horizontalFov: this.go2HorizontalFovDeg,
+                verticalFov: vertical,
+                aspect
+            });
+            try {
+                this.events.invoke('showPopup', {
+                    type: 'info',
+                    header: 'FOV 已校准',
+                    message: '已自动校准为宇树 GO2：水平FOV=120°（可手动调整，必要时可一键恢复）'
+                });
+            } catch {
+                // ignore
+            }
+        };
+
+        requestAnimationFrame(tick);
     }
 
     // ========================================================================
@@ -188,6 +251,34 @@ class CameraController {
         return { position, target };
     }
 
+    private poseToSceneRollDeg(pose: CameraPose): number {
+        // Derive roll (degrees) from quaternion by comparing its up vector against a no-roll reference.
+        const q = new Quat(pose.rotation.x, pose.rotation.y, pose.rotation.z, pose.rotation.w);
+        q.normalize();
+
+        const forward = new Vec3(0, 0, -1);
+        const up = new Vec3(0, 1, 0);
+        q.transformVector(forward, forward).normalize();
+        q.transformVector(up, up).normalize();
+
+        // Build reference basis with zero roll using WORLD_UP.
+        const worldUp = new Vec3(0, 1, 0);
+        const refRight = new Vec3().cross(forward, worldUp);
+        if (refRight.length() < 1e-6) {
+            // forward nearly parallel to worldUp, choose fallback
+            refRight.cross(forward, new Vec3(1, 0, 0));
+        }
+        refRight.normalize();
+        const refUp = new Vec3().cross(refRight, forward).normalize();
+
+        // Signed angle around forward from refUp -> up
+        const cross = new Vec3().cross(refUp, up);
+        const sin = forward.dot(cross);
+        const cos = math.clamp(refUp.dot(up), -1, 1);
+        const rollRad = Math.atan2(sin, cos);
+        return rollRad * math.RAD_TO_DEG;
+    }
+
     /**
      * 设置相机位姿
      */
@@ -211,7 +302,8 @@ class CameraController {
         }
 
         const scenePose = this.poseToScenePose(pose);
-        this.events.fire('camera.setPose', scenePose, speed);
+        const roll = this.poseToSceneRollDeg(pose);
+        this.events.fire('camera.setPose', { ...scenePose, roll }, speed);
 
         // 广播给 VLN UI/其他模块
         this.events.fire(VLNEventNames.CAMERA_POSE_SET, pose);
@@ -259,8 +351,16 @@ class CameraController {
      * 获取当前相机位姿
      */
     getPose(): CameraPose {
-        // 目前 SuperSplat 对外只暴露 position+target，因此这里先回传 position，rotation 保持单位四元数。
-        // VLN 的“设置位姿”走 setPose()，无需依赖 getPose() 的 rotation 来工作。
+        const current6 = this.events.invoke('camera.getPose6dof') as any;
+        if (current6?.position && current6?.rotation) {
+            return {
+                position: { x: current6.position.x, y: current6.position.y, z: current6.position.z },
+                rotation: { x: current6.rotation.x, y: current6.rotation.y, z: current6.rotation.z, w: current6.rotation.w },
+                fov: this.getFov()
+            };
+        }
+
+        // Fallback to legacy pose (no reliable rotation)
         const current = this.events.invoke('camera.getPose') as any;
         if (current?.position) {
             return {

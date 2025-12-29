@@ -173,7 +173,6 @@ class CameraSettingsPanel extends Container {
 
         if (fireEvent) {
             // 触发相机 FOV 设置事件
-            this.events.fire('camera.setFov', value);
             this.events.fire(VLNEventNames.CAMERA_SET_FOV, value);
         }
     }

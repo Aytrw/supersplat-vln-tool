@@ -33,7 +33,7 @@ class FOVIndicator extends Container {
     private sliderThumb: Container;
     private modeSelect: SelectInput;
     private readout: Label;
-    private calibrateBtn: Button;
+    private go2CalibrateBtn: Button;
     
     // State
     // We treat `verticalFov` as the "real" camera FOV (vertical FOV in degrees)
@@ -51,7 +51,7 @@ class FOVIndicator extends Container {
     private sliderMin: number = 10;
     private sliderMax: number = 120;
 
-    // Optional intrinsics for "calibrate" (prefer task metadata)
+    // Optional intrinsics kept for potential future use (button removed per product spec)
     private intrinsics: CameraIntrinsics | null = null;
     private isDragging: boolean = false;
     private pendingResync: number | null = null;
@@ -228,13 +228,13 @@ class FOVIndicator extends Container {
         });
         this.append(this.readout);
 
-        // Calibrate button
-        this.calibrateBtn = new Button({
-            text: '按真实相机校准',
+        // GO2 calibration button (HFOV=120°)
+        this.go2CalibrateBtn = new Button({
+            text: '校准为GO2(120°水平)',
             class: 'vln-fov-calibrate-btn'
         });
-        this.calibrateBtn.on('click', () => this.calibrateFromIntrinsics());
-        this.append(this.calibrateBtn);
+        this.go2CalibrateBtn.on('click', () => this.calibrateToGo2());
+        this.append(this.go2CalibrateBtn);
 
         // Update visual state
         this.updateSliderRange();
@@ -243,7 +243,7 @@ class FOVIndicator extends Container {
         // Register tooltip
         this.tooltips.register(this.sliderContainer, '调整相机视角 (FOV)', 'top');
         this.tooltips.register(this.modeSelect, '选择主控FOV维度（另一维自动换算）', 'top');
-        this.tooltips.register(this.calibrateBtn, '从任务提供的真实相机内参自动校准 FOV', 'top');
+        this.tooltips.register(this.go2CalibrateBtn, '一键恢复为宇树GO2：水平FOV=120°', 'top');
     }
 
     /**
@@ -301,21 +301,38 @@ class FOVIndicator extends Container {
             this.setVerticalFov(fov, false);
         });
 
-        // Capture task metadata for calibration (optional)
+        // Capture task metadata (kept for potential future usage)
         this.events.on(VLNEventNames.TASK_LOADED, (task: any) => {
             this.intrinsics = this.extractIntrinsics(task?.metadata);
-            this.calibrateBtn.enabled = !!this.intrinsics;
         });
 
         this.events.on(VLNEventNames.TASK_CLEARED, () => {
             this.intrinsics = null;
-            this.calibrateBtn.enabled = false;
         });
 
         // When the camera / render target resizes, the aspect ratio changes and v/h conversion must refresh.
         this.events.on('camera.resize', () => {
             this.resyncFromSceneCamera();
         });
+    }
+
+    private async showInfo(message: string): Promise<void> {
+        try {
+            await this.events.invoke('showPopup', {
+                type: 'info',
+                header: 'FOV 校准',
+                message
+            });
+        } catch {
+            // ignore (host may not provide popup)
+        }
+    }
+
+    private calibrateToGo2(): void {
+        // GO2 spec: HFOV=120°. In our UI, master horizontal means slider value equals horizontal FOV.
+        this.setMasterMode('horizontal');
+        this.setMasterFov(120, true);
+        void this.showInfo('已校准为宇树 GO2：水平FOV=120°');
     }
 
     // ========================================================================
@@ -501,26 +518,6 @@ class FOVIndicator extends Container {
         return null;
     }
 
-    private calibrateFromIntrinsics(): void {
-        if (!this.intrinsics) {
-            window.alert('任务 metadata 中未提供相机内参（fx/fy/width/height 或 K+width/height），无法自动校准。');
-            return;
-        }
-
-        const { fx, fy, width, height } = this.intrinsics;
-
-        // 真实相机的 FOV 由图像尺寸与焦距（像素单位）决定
-        // vFOV = 2 * atan(h / (2*fy))
-        // hFOV = 2 * atan(w / (2*fx))
-        const vFov = 2 * Math.atan(height / (2 * fy)) * 180 / Math.PI;
-        const hFov = 2 * Math.atan(width / (2 * fx)) * 180 / Math.PI;
-
-        if (this.masterMode === 'vertical') {
-            this.setMasterFov(vFov, true);
-        } else {
-            this.setMasterFov(hFov, true);
-        }
-    }
 }
 
 export { FOVIndicator };

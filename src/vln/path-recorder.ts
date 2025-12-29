@@ -96,11 +96,57 @@ class PathRecorder {
             this.setCurrentInstructionIndex(index);
         });
 
+        // 监听帧率变更（来自 UI）
+        this.events.on('vln.recorder.setFrameRate', (frameRate: number) => {
+            this.setFrameRate(frameRate);
+        });
+
         // 注册函数接口
         this.events.function('vln.recorder.status', () => this.status);
         this.events.function('vln.recorder.frames', () => this.frames);
         this.events.function('vln.recorder.frameCount', () => this.frames.length);
         this.events.function('vln.recorder.duration', () => this.getDuration());
+    }
+
+    private sanitizeFrameRate(frameRate: number): number | null {
+        if (!Number.isFinite(frameRate)) {
+            return null;
+        }
+
+        const next = Math.round(frameRate);
+        if (next < 1) {
+            return null;
+        }
+
+        // 简单上限保护，避免误输入导致 interval 过小
+        return Math.min(next, 240);
+    }
+
+    setFrameRate(frameRate: number): void {
+        const next = this.sanitizeFrameRate(frameRate);
+        if (next === null) {
+            console.warn('VLN: PathRecorder.setFrameRate - invalid value', frameRate);
+            return;
+        }
+
+        if (this.config.frameRate === next) {
+            return;
+        }
+
+        this.config.frameRate = next;
+
+        // 如果正在录制，则立刻按新帧率重启定时器
+        if (this.status === 'recording') {
+            if (this.recordingTimer !== null) {
+                clearInterval(this.recordingTimer);
+                this.recordingTimer = null;
+            }
+
+            const interval = 1000 / this.config.frameRate;
+            this.recordingTimer = window.setInterval(() => {
+                this.captureFrame();
+            }, interval);
+        }
     }
 
     // ========================================================================

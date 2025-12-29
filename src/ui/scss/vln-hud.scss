@@ -788,32 +788,178 @@
 
 #vln-fly-hint.vln-hud-panel {
     position: fixed;
-    /* Position (left/bottom/width) is computed in JS to align with the instruction panel. */
-    max-width: 320px;
+    /* Center on screen */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 420px;
+    min-width: 320px;
     z-index: 1001;
+    padding: 16px 20px;
 
     .vln-fly-hint-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 6px;
+        margin-bottom: 12px;
+        gap: 12px;
     }
 
     .vln-fly-hint-title {
         font-weight: 600;
+        font-size: 14px;
         opacity: 0.95;
+    }
+
+    .vln-fly-hint-close {
+        flex: 0 0 auto;
+        width: 24px;
+        height: 24px;
+        min-width: 24px;
+        padding: 0;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        border-radius: 4px;
+        cursor: pointer;
+        opacity: 0.7;
+        transition: opacity 0.15s, background 0.15s;
+        pointer-events: auto;
+        color: $text-primary;
+        font-size: 18px;
+        line-height: 22px;
+        text-align: center;
+        appearance: none;
+
+        &:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.15);
+        }
     }
 
     .vln-fly-hint-content {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 12px;
     }
 
-    .vln-fly-hint-text {
-        white-space: pre-line;
-        line-height: 1.35;
+    .vln-fly-hint-visual {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .vln-keycap {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 28px;
+        min-width: 32px;
+        padding: 0 10px;
+        border-radius: 5px;
+        background: $bcg-primary;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        color: $text-primary;
+        font-family: monospace;
+        font-size: 12px;
+        line-height: 1;
+        user-select: none;
+        opacity: 0.95;
+    }
+
+    .vln-keycap--wide {
+        min-width: 60px;
+        justify-content: center;
+    }
+
+    // Main controls row (WASD + Vertical)
+    .vln-fly-hint-main {
+        display: flex;
+        gap: 24px;
+        align-items: flex-start;
+        justify-content: center;
+    }
+
+    .vln-fly-hint-section-label {
+        font-size: 10px;
+        color: $text-darkest;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+        text-align: center;
+    }
+
+    // WASD grid layout
+    .vln-fly-hint-wasd {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .vln-fly-hint-wasd-grid {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .vln-fly-hint-wasd-middle {
+        display: flex;
+        gap: 4px;
+    }
+
+    // Vertical controls (Space/Ctrl)
+    .vln-fly-hint-vert {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .vln-fly-hint-vert-keys {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .vln-fly-hint-vert-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: $text-primary;
+        opacity: 0.85;
+    }
+
+    .vln-fly-hint-extra {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .vln-fly-hint-extra-group {
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.06);
+    }
+
+    .vln-fly-hint-extra-label {
+        font-size: 10px;
+        color: $text-darkest;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
         opacity: 0.9;
+        margin-right: 4px;
+    }
+
+    .vln-fly-hint-look {
+        font-size: 11px;
+        color: $text-primary;
+        opacity: 0.75;
+        text-align: center;
     }
 
     &.is-wake {

@@ -794,8 +794,23 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         };
     });
 
-    events.on('camera.setPose', (pose: { position: Vec3, target: Vec3 }, speed = 1) => {
-        scene.camera.setPose(pose.position, pose.target, speed);
+    // 6DoF pose: includes rotation quaternion and roll (degrees)
+    events.function('camera.getPose6dof', () => {
+        const camera = scene.camera;
+        const position = camera.entity.getPosition();
+        const focalPoint = camera.focalPoint;
+        const rotation = camera.entity.getRotation();
+        const euler = camera.entity.getLocalEulerAngles();
+        return {
+            position: { x: position.x, y: position.y, z: position.z },
+            target: { x: focalPoint.x, y: focalPoint.y, z: focalPoint.z },
+            rotation: { x: rotation.x, y: rotation.y, z: rotation.z, w: rotation.w },
+            roll: euler.z
+        };
+    });
+
+    events.on('camera.setPose', (pose: { position: Vec3, target: Vec3, roll?: number }, speed = 1) => {
+        scene.camera.setPose(pose.position, pose.target, speed, pose.roll);
     });
 
     // hack: fire events to initialize UI

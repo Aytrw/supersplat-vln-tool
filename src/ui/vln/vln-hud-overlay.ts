@@ -209,28 +209,7 @@ class VLNHudOverlay extends Container {
     }
 
     private updateFlyHintLayout(): void {
-        const panelDom = this.instructionPanelDom;
-        const hintDom = this.flyHintDom;
-        if (!panelDom || !hintDom) return;
-
-        const rect = panelDom.getBoundingClientRect();
-        const gapPx = 8;
-
-        // Position directly above the instruction panel, aligned to its left edge.
-        const left = Math.max(0, Math.round(rect.left));
-        const bottom = Math.max(0, Math.round(window.innerHeight - rect.top + gapPx));
-        const width = Math.max(180, Math.round(rect.width));
-
-        hintDom.style.position = 'fixed';
-        hintDom.style.left = `${left}px`;
-        hintDom.style.bottom = `${bottom}px`;
-        hintDom.style.width = `${width}px`;
-
-        // Make sure it doesn't overflow the viewport horizontally.
-        const maxLeft = Math.max(0, window.innerWidth - width);
-        if (left > maxLeft) {
-            hintDom.style.left = `${maxLeft}px`;
-        }
+        // Fly hint is now centered via CSS, no dynamic positioning needed
     }
 
 

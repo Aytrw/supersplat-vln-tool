@@ -130,11 +130,48 @@ class VLNManager {
             this.exportPath(format);
         });
 
+        // 录制帧率设置（来自 UI）
+        this.events.on('vln.recorder.setFrameRate', (frameRate: number) => {
+            this.setRecordingFrameRate(frameRate);
+        });
+
         // 注册函数
         this.events.function('vln.currentTask', () => this.currentTask);
         this.events.function('vln.currentSession', () => this.currentSession);
         this.events.function('vln.isRecording', () => this.isRecording());
         this.events.function('vln.recordingConfig', () => this.recordingConfig);
+    }
+
+    private sanitizeFrameRate(frameRate: number): number | null {
+        if (!Number.isFinite(frameRate)) {
+            return null;
+        }
+
+        const next = Math.round(frameRate);
+        if (next < 1) {
+            return null;
+        }
+
+        return Math.min(next, 240);
+    }
+
+    private setRecordingFrameRate(frameRate: number): void {
+        const next = this.sanitizeFrameRate(frameRate);
+        if (next === null) {
+            console.warn('VLN: setRecordingFrameRate - invalid value', frameRate);
+            return;
+        }
+
+        if (this.recordingConfig.frameRate === next) {
+            return;
+        }
+
+        this.recordingConfig.frameRate = next;
+
+        // 如果已有会话（极端情况下 UI 仍触发），保持导出元数据一致
+        if (this.currentSession && this.currentSession.status !== 'stopped') {
+            this.currentSession.frameRate = next;
+        }
     }
 
     // ========================================================================

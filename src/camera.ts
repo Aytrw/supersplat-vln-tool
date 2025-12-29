@@ -22,6 +22,7 @@ import {
     Ray,
     RenderTarget,
     Texture,
+    Quat,
     Vec3,
     Vec4,
     WebglGraphicsDevice
@@ -54,6 +55,7 @@ const vecb = new Vec3();
 const va = new Vec3();
 const m = new Mat4();
 const v4 = new Vec4();
+const quat = new Quat();
 
 // modulo dealing with negative numbers
 const mod = (n: number, m: number) => ((n % m) + m) % m;
@@ -63,6 +65,7 @@ class Camera extends Element {
     entity: Entity;
     focalPointTween = new TweenValue({ x: 0, y: 0.5, z: 0 });
     azimElevTween = new TweenValue({ azim: 30, elev: -15 });
+    rollTween = new TweenValue({ roll: 0 });
     distanceTween = new TweenValue({ distance: 1 });
 
     minElev = -90;
@@ -214,6 +217,17 @@ class Camera extends Element {
         this.ortho = false;
     }
 
+    setRoll(roll: number, dampingFactorFactor: number = 1) {
+        // normalize into [-180, 180) to avoid large numbers
+        roll = mod(roll + 180, 360) - 180;
+
+        const t = this.rollTween;
+        t.goto({ roll }, dampingFactorFactor * this.scene.config.controls.dampingFactor);
+
+        // return to perspective mode on rotation
+        this.ortho = false;
+    }
+
     setDistance(distance: number, dampingFactorFactor: number = 1) {
         const controls = this.scene.config.controls;
 
@@ -224,13 +238,16 @@ class Camera extends Element {
         t.goto({ distance }, dampingFactorFactor * controls.dampingFactor);
     }
 
-    setPose(position: Vec3, target: Vec3, dampingFactorFactor: number = 1) {
+    setPose(position: Vec3, target: Vec3, dampingFactorFactor: number = 1, roll?: number) {
         vec.sub2(target, position);
         const l = vec.length();
         const azim = Math.atan2(-vec.x / l, -vec.z / l) * math.RAD_TO_DEG;
         const elev = Math.asin(vec.y / l) * math.RAD_TO_DEG;
         this.setFocalPoint(target, dampingFactorFactor);
         this.setAzimElev(azim, elev, dampingFactorFactor);
+        if (roll !== undefined) {
+            this.setRoll(roll, dampingFactorFactor);
+        }
         this.setDistance(l / this.sceneRadius * this.fovFactor, dampingFactorFactor);
     }
 
@@ -462,9 +479,11 @@ class Camera extends Element {
         // update underlying values
         this.focalPointTween.update(deltaTime);
         this.azimElevTween.update(deltaTime);
+        this.rollTween.update(deltaTime);
         this.distanceTween.update(deltaTime);
 
         const azimElev = this.azimElevTween.value;
+        const roll = this.rollTween.value;
         const distance = this.distanceTween.value;
 
         calcForwardVec(forwardVec, azimElev.azim, azimElev.elev);
@@ -473,7 +492,7 @@ class Camera extends Element {
         cameraPosition.add(this.focalPointTween.value);
 
         this.entity.setLocalPosition(cameraPosition);
-        this.entity.setLocalEulerAngles(azimElev.elev, azimElev.azim, 0);
+        this.entity.setLocalEulerAngles(azimElev.elev, azimElev.azim, roll.roll);
 
         this.fitClippingPlanes(this.entity.getLocalPosition(), this.entity.forward);
 
